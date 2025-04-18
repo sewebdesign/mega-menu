@@ -11,9 +11,9 @@
       this.config = {
         clickToShow: false,        // Use click instead of hover to open menus
         folderClickThrough: false, // Allow folder links to be clickable
-        hideOnScroll: false,       // Close menu when scrolling
-        revealAnimation: 'fade',   // 'fade' or 'slide'
-        memberLinks: []            // Member area links
+        showOnMobile: true,        // Show mega menu content in mobile menu
+        menuWidth: 'full',         // 'full' or 'inset'
+        memberLinks: []            // Member area links            
       };
       
       // Merge provided options with defaults
@@ -25,16 +25,20 @@
         activeMenuId: null,
         headerHeight: null,
         headerTheme: null,
+        headerMobileTheme: null,  
         loadedMenus: new Set(),
-        isInIframe: window.self !== window.top
+        isInIframe: window.self !== window.top,
+        isTouchDevice: this.detectTouchDevice()
       };
       
       // DOM element cache
       this.elements = {
         header: null,
+        headerMenu: null,          // Added headerMenu element
         container: null,
         megaContainer: null,
-        menuLinks: []
+        menuLinks: [],
+        mobileFolders: []          // Added mobile folders
       };
       
       // Store timeouts for proper cleanup
@@ -58,7 +62,8 @@
       this.handlers = {
         keydown: this.handleKeyDown.bind(this),
         click: this.handleDocumentClick.bind(this),
-        scroll: this.handleScroll.bind(this)
+        scroll: this.handleScroll.bind(this),
+        mobileFolderChange: this.handleMobileFolderChange.bind(this) // Added handler for mobile folders
       };
       
       // Use debounced version for resize handler
@@ -79,6 +84,18 @@
     }
     
     /**
+     * Detect if the device is a touch device (no mouse cursor)
+     * @returns {boolean} - True if the device is a touch device
+     */
+    detectTouchDevice() {
+      // Primary check: Does the device support touch events?
+      const hasTouchEvents = 'ontouchstart' in window || 
+                            navigator.maxTouchPoints > 0 ||
+                            (navigator.msMaxTouchPoints && navigator.msMaxTouchPoints > 0);
+      return hasTouchEvents;
+    }
+    
+    /**
      * Initialize the mega menu system
      */
     init() {
@@ -88,6 +105,9 @@
       // Create mega container
       this.createMegaContainer();
       
+      // Apply menu width setting to body
+      this.applyMenuWidthClass();
+      
       // Find and process mega menu links
       this.processMegaLinks();
       
@@ -96,6 +116,11 @@
       
       // Set up observer for edit mode
       this.setupEditModeObserver();
+      
+      // Set up mobile menu folder change observer - only if showOnMobile is true
+      if (this.config.showOnMobile) {
+        this.setupMobileFolderObserver();
+      }
       
       // Mark as initialized
       this.state.initialized = true;
@@ -112,6 +137,23 @@
       if (this.elements.header) {
         this.state.headerTheme = this.elements.header.getAttribute('data-section-theme');
       }
+      
+      // Only cache mobile-related elements if showOnMobile is true
+      if (this.config.showOnMobile) {
+        this.elements.headerMenu = document.querySelector('#header .header-menu');
+        
+        // Store mobile header theme
+        if (this.elements.headerMenu) {
+          this.state.headerMobileTheme = this.elements.headerMenu.getAttribute('data-section-theme');
+        }
+        
+        // Find mobile menu folders that correspond to mega menus
+        if (this.elements.headerMenu) {
+          this.elements.mobileFolders = Array.from(
+            this.elements.headerMenu.querySelectorAll('.header-menu-nav-folder[data-folder^="/mega-"]')
+          );
+        }
+      }
     }
     
     /**
@@ -121,13 +163,9 @@
       this.elements.megaContainer = document.createElement('div');
       this.elements.megaContainer.id = 'mega-container';
       
-      // Add animation class if needed
-      if (this.config.revealAnimation === 'slide') {
-        this.elements.megaContainer.classList.add('slide');
-      }
-      
       // Append to body
       document.body.appendChild(this.elements.megaContainer);
+      
     }
     
     /**
@@ -197,11 +235,18 @@
           
           // Process the menu content
           this.processMenuContent(menuContainer, element, linkPath, html);
+          
+          // Add the same content to mobile menu if showOnMobile is true and a matching folder exists
+          if (this.config.showOnMobile) {
+            this.addContentToMobileMenu(linkPath, html);
+          }
         } catch (error) {
           console.error(`Error loading mega menu content:`, error);
         }
       }
     }
+    
+ 
     
     /**
      * Process loaded menu content
@@ -220,31 +265,29 @@
       // Parse the HTML
       const parser = new DOMParser();
       const doc = parser.parseFromString(html, 'text/html');
-      const sections = doc.querySelectorAll('#page .page-section, #sectionThemesStyles');
+      const firstSection = doc.querySelector('#page .page-section');
       
       // Use requestAnimationFrame for DOM operations to optimize performance
       requestAnimationFrame(() => {
-        // Insert content
-        const fragment = document.createDocumentFragment();
-        sections.forEach(section => {
-          fragment.appendChild(section.cloneNode(true));
-        });
-        container.appendChild(fragment);
+        // Insert only the first section if it exists
+        if (firstSection) {
+          container.appendChild(firstSection.cloneNode(true));
+          
+          // Store the section theme from the first section
+          const sectionTheme = firstSection.getAttribute('data-section-theme');
+          if (sectionTheme) {
+            container.setAttribute('data-section-theme', sectionTheme);
+          }
+        }
         
         // Initialize Squarespace blocks if needed
         if (window.Squarespace && window.Y) {
           try {
-            window.Squarespace.initializeLayoutBlocks(window.Y, window.Y.one(`#mega-container #${linkPath}`));
+             // Page content initialization
+             window.Squarespace.initializePageContent(window.Y, window.Y.one(container));
+             window.Squarespace.initializeNativeVideo(Y, Y.one(container));     
           } catch (err) {
             console.warn('Failed to initialize Squarespace blocks:', err);
-          }
-        }
-        
-        // Load images
-        const images = container.querySelectorAll('img[data-src]');
-        if (window.ImageLoader) {
-          for (let i = 0; i < images.length; i++) {
-            window.ImageLoader.load(images[i], { load: true });
           }
         }
         
@@ -257,6 +300,7 @@
       this.setupMenuTrigger(trigger, linkPath);
     }
     
+  
     /**
      * Set up event listeners based on configuration
      * @param {HTMLElement} trigger - The trigger element
@@ -319,6 +363,63 @@
         }
       });
     }
+    
+       /**
+     * Add mega menu content to mobile menu
+     * @param {string} linkPath - The path of the link
+     * @param {string} html - The HTML content of the menu
+     */
+    addContentToMobileMenu(linkPath, html) {
+      // Skip if showOnMobile is false
+      if (this.config.showOnMobile === false || this.config.showOnMobile === 'false') return;
+      
+      // Find the corresponding mobile folder
+      const mobileFolder = this.elements.mobileFolders.find(folder => 
+        folder.getAttribute('data-folder') === `/${linkPath}`
+      );
+      
+      if (!mobileFolder) return;
+      
+      // Parse the HTML
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const firstSection = doc.querySelector('#page .page-section');
+      
+      // Create a container for the mega content
+      const mobileMenuContainer = document.createElement('div');
+      mobileMenuContainer.className = 'mobile-mega-content';
+      mobileMenuContainer.setAttribute('data-mega-path', linkPath);
+      
+      // Store the section theme from the first section for later use
+      if (firstSection) {
+        const sectionTheme = firstSection.getAttribute('data-section-theme');
+        if (sectionTheme) {
+          mobileMenuContainer.setAttribute('data-section-theme', sectionTheme);
+        }
+      }  
+
+      // Insert only the first section
+        mobileMenuContainer.appendChild(firstSection.cloneNode(true));
+      
+      //Add .btn class to all mega mobile button blocks
+      const buttonBlocks = mobileMenuContainer.querySelectorAll('.button-block a');
+      buttonBlocks.forEach(buttonBlock => {
+        buttonBlock.classList.add('btn');
+      });
+      
+      mobileFolder.appendChild(mobileMenuContainer);
+      
+          // Initialize Squarespace blocks if needed
+      if (window.Squarespace && window.Y) {
+        try {
+window.Squarespace.initializePageContent(window.Y, window.Y.one(mobileMenuContainer));
+        
+        } catch (err) {
+          console.warn('Failed to initialize Squarespace blocks in mobile menu:', err);
+        }
+      }
+    }
+    
     
     /**
      * Find all focusable elements within a container
@@ -431,15 +532,15 @@
           link.setAttribute('tabindex', '0');
         });
         
-        // Set padding on first section based on header height
+        // Handle adaptive theme if needed
         const firstSection = menu.querySelector('.page-section:first-child');
-        if (firstSection) {
-          firstSection.style.paddingTop = `${this.state.headerHeight}px`;
-          
-          // Handle adaptive theme if needed
+        if (firstSection) {        
           if (this.elements.header && this.elements.header.getAttribute('data-header-style') === 'dynamic') {
-            const menuTheme = firstSection.getAttribute('data-section-theme');
-            this.elements.header.setAttribute('data-section-theme', menuTheme);
+            const menuTheme = menu.getAttribute('data-section-theme') || 
+                              firstSection.getAttribute('data-section-theme');
+            if (menuTheme) {
+              this.elements.header.setAttribute('data-section-theme', menuTheme);
+            }
           }
         }
         
@@ -460,10 +561,8 @@
         this.timeouts.push(timeoutId);
       }
       
-      // Add scroll listener if configured
-      if (this.config.hideOnScroll) {
-        window.addEventListener('scroll', this.handlers.scroll, { passive: true });
-      }
+      // Always add scroll listener - hide on scroll is now always enabled
+      window.addEventListener('scroll', this.handlers.scroll, { passive: true });
       
       // Track active menu
       this.state.activeMenuId = menu.id;
@@ -518,13 +617,31 @@
         this.timeouts.push(timeoutId);
       }
       
-      // Remove scroll listener
-      if (this.config.hideOnScroll) {
-        window.removeEventListener('scroll', this.handlers.scroll);
-      }
+      // Always remove scroll listener when menu is closed
+      window.removeEventListener('scroll', this.handlers.scroll);
       
       // Clear active menu
       this.state.activeMenuId = null;
+    }
+    
+    /**
+     * Apply menu width class to body based on configuration
+     */
+      applyMenuWidthClass() {
+      if (this.config.menuWidth === 'inset') {
+        document.body.classList.add('cse-mega-inset');
+        
+        // Add mega-inset-click class to mega-container if clickToShow is true
+        if (this.elements.megaContainer && 
+            (this.config.clickToShow === true || this.config.clickToShow === 'true')) {
+          this.elements.megaContainer.classList.add('mega-inset-click');
+        }
+      } else {
+        document.body.classList.remove('cse-mega-inset');
+        if (this.elements.megaContainer) {
+          this.elements.megaContainer.classList.remove('mega-inset-click');
+        }
+      }
     }
     
     /**
@@ -532,7 +649,9 @@
      */
     updateHeaderHeight() {
       if (this.elements.header) {
-        this.state.headerHeight = this.elements.header.offsetHeight;
+        const headerRect = this.elements.header.getBoundingClientRect();
+    	  this.state.headerHeight = headerRect.height;
+        document.body.style.setProperty('--csemegaheaderheight', `${this.state.headerHeight}px`);
       }
     }
     
@@ -589,23 +708,77 @@
     }
     
     /**
+     * Set up observer for mobile folder changes
+     */
+    setupMobileFolderObserver() {
+      // Skip if showOnMobile is false
+      if (!this.config.showOnMobile || !this.elements.headerMenu) return;
+      
+      // Create a mutation observer to detect mobile folder active class changes
+      const observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+          if (mutation.type === 'attributes' && 
+              mutation.attributeName === 'class' && 
+              mutation.target.classList.contains('header-menu-nav-folder')) {
+            
+            // Handle folder class change
+            this.handleMobileFolderChange(mutation.target);
+          }
+        }
+      });
+      
+      // Start observing all mobile folders
+      this.elements.mobileFolders.forEach(folder => {
+        observer.observe(folder, {
+          attributes: true,
+          attributeFilter: ['class']
+        });
+      });
+      
+      // Store observer reference for cleanup
+      this.mobileFolderObserver = observer;
+    }
+    
+    /**
+     * Handle mobile folder active state changes
+     * @param {HTMLElement} folder - The folder that changed
+     */
+    handleMobileFolderChange(folder) {
+      // Skip if showOnMobile is false
+      if (!this.elements.container.classList.contains('header--menu-open') || !this.config.showOnMobile || !this.elements.headerMenu) return;
+      
+      const isActive = folder.classList.contains('header-menu-nav-folder--active');
+      const megaPath = folder.getAttribute('data-folder');
+      
+      if (isActive && megaPath) {
+        // Find the mega content to get the theme
+        const megaContent = folder.querySelector('.mobile-mega-content');
+        if (megaContent) {
+          const theme = megaContent.getAttribute('data-section-theme');
+          if (theme) {
+            // Apply theme to header menu
+            this.elements.headerMenu.setAttribute('data-section-theme', theme);
+            this.elements.header.setAttribute('data-section-theme', theme);
+          }
+        }
+      } else {
+        // Restore original theme
+        if (this.state.headerMobileTheme) {
+          this.elements.headerMenu.setAttribute('data-section-theme', this.state.headerMobileTheme);
+          this.elements.header.setAttribute('data-section-theme', this.state.headerMobileTheme);
+        }
+      }
+    }
+    
+    /**
      * Handle window resize event
      */
     handleResize() {
       // Reset cached header height on resize
-      this.state.headerHeight = null;
-      
+      this.state.headerHeight = null;     
       // Update header height if a menu is open
       if (this.state.activeMenuId) {
         this.updateHeaderHeight();
-        
-        const menu = document.getElementById(this.state.activeMenuId);
-        if (menu) {
-          const firstSection = menu.querySelector('.page-section:first-child');
-          if (firstSection) {
-            firstSection.style.paddingTop = `${this.state.headerHeight}px`;
-          }
-        }
       }
     }
     
@@ -629,109 +802,117 @@
      * @param {MouseEvent} event - The click event
      */
     handleDocumentClick(event) {
-      if (!this.state.activeMenuId) return;
-      
+      if (!this.state.activeMenuId) return;   
       const menu = document.getElementById(this.state.activeMenuId);
-      const trigger = document.querySelector(`.mega-link[aria-controls="${this.state.activeMenuId}"]`);
-      
-      if (menu && trigger && 
-          !menu.contains(event.target) && 
-          !trigger.contains(event.target)) {
-        
+      const trigger = document.querySelector(`.mega-link[aria-controls="${this.state.activeMenuId}"]`);     
+      if (menu&&trigger&&!menu.contains(event.target)&&!trigger.contains(event.target)) {
         this.closeMenu(trigger, menu, false);
       }
     }
     
     /**
      * Handle scroll event for closing menu on scroll
+     * Always enabled now
      */
-    handleScroll() {
-      if (!this.state.activeMenuId) return;
-      
+      handleScroll() {
+      if (!this.state.activeMenuId) return;    
       const menu = document.getElementById(this.state.activeMenuId);
       if (!menu) return;
-      
-      const firstSection = menu.querySelector('.page-section');
-      if (firstSection) {
-        const sectionHeight = firstSection.offsetHeight;
-        const windowHeight = window.innerHeight;
-        
-        // Close if section is smaller than window height (simple heuristic)
-        if (sectionHeight < windowHeight) {
-          const trigger = document.querySelector(`.mega-link[aria-controls="${this.state.activeMenuId}"]`);
-          if (trigger) {
-            this.closeMenu(trigger, menu, false);
-          }
+      const section = menu.querySelector('.page-section');
+      if (section) {
+        const trigger = document.querySelector(`.mega-link[aria-controls="${this.state.activeMenuId}"]`);
+        if (trigger) {
+          this.closeMenu(trigger, menu, false);
         }
       }
     }
     
-    /**
-     * Clean up and destroy the mega menu instance
-     */
-    destroy() {
-      // Clean up all timeouts
-      this.timeouts.forEach(clearTimeout);
-      this.timeouts = [];
-      
-      // Clean up global event listeners
-      window.removeEventListener('resize', this.handlers.resize);
-      document.removeEventListener('keydown', this.handlers.keydown);
-      document.removeEventListener('click', this.handlers.click);
-      
-      if (this.config.hideOnScroll && this.state.activeMenuId) {
-        window.removeEventListener('scroll', this.handlers.scroll);
-      }
-      
-      // Remove keyboard traps from any open menus
-      if (this.state.activeMenuId) {
-        const menu = document.getElementById(this.state.activeMenuId);
-        if (menu) {
-          this.removeKeyboardTrap(menu);
-        }
-      }
-      
-      // Clean up all menu-related event listeners
-      this.elements.menuLinks.forEach(trigger => {
-        const menuId = trigger.getAttribute('aria-controls');
-        if (!menuId) return;
-        
-        const menu = document.getElementById(menuId);
-        if (!menu) return;
-        
-        // Clean up trigger event listeners
-        const triggerClone = trigger.cloneNode(true);
-        trigger.parentNode.replaceChild(triggerClone, trigger);
-        
-        // Clean up menu event listeners
-        const menuClone = menu.cloneNode(true);
-        if (menu.parentNode) {
-          menu.parentNode.replaceChild(menuClone, menu);
-        }
-      });
-      
-      // Stop observing DOM changes
-      if (this.editModeObserver) {
-        this.editModeObserver.disconnect();
-        this.editModeObserver = null;
-      }
-      
-      // Remove mega container from DOM
-      if (this.elements.megaContainer) {
-        this.elements.megaContainer.remove();
-      }
-      
-      // Remove from instance tracking
-      if (window.megaMenuInstances) {
-        window.megaMenuInstances.delete(this);
-      }
-      
-      // Clear references to allow garbage collection
-      this.handlers = null;
-      this.elements = null;
-      this.config = null;
-      this.state.initialized = false;
-    }
+   /**
+    * Clean up and destroy the mega menu instance
+    */
+   destroy() {
+     // Clean up all timeouts
+     this.timeouts.forEach(clearTimeout);
+     this.timeouts = [];
+     
+     // Clean up global event listeners
+     window.removeEventListener('resize', this.handlers.resize);
+     document.removeEventListener('keydown', this.handlers.keydown);
+     document.removeEventListener('click', this.handlers.click);
+     
+     // Always remove scroll event listener if menu is active
+     if (this.state.activeMenuId) {
+       window.removeEventListener('scroll', this.handlers.scroll);
+     }
+     
+     // Clean up all menu-related event listeners
+     this.elements.menuLinks.forEach(trigger => {
+       const menuId = trigger.getAttribute('aria-controls');
+       if (!menuId) return;
+       
+       const menu = document.getElementById(menuId);
+       if (!menu) return;
+       
+       // Clean up trigger event listeners
+       const triggerClone = trigger.cloneNode(true);
+       trigger.parentNode.replaceChild(triggerClone, trigger);
+       
+       // Clean up menu event listeners
+       const menuClone = menu.cloneNode(true);
+       if (menu.parentNode) {
+         menu.parentNode.replaceChild(menuClone, menu);
+       }
+     });
+     
+     // Clean up mobile menu content if showOnMobile is true
+     if (this.config.showOnMobile && this.elements.mobileFolders && this.elements.mobileFolders.length) {
+       this.elements.mobileFolders.forEach(folder => {
+         // Find and remove all mobile mega content elements
+         const mobileContents = folder.querySelectorAll('.mobile-mega-content');
+         mobileContents.forEach(content => {
+           content.remove();
+         });
+       });
+     }
+     
+     // Disconnect mobile folder observer if showOnMobile is true
+     if (this.config.showOnMobile && this.mobileFolderObserver) {
+       this.mobileFolderObserver.disconnect();
+       this.mobileFolderObserver = null;
+     }
+     
+     // Stop observing DOM changes
+     if (this.editModeObserver) {
+       this.editModeObserver.disconnect();
+       this.editModeObserver = null;
+     }
+     
+     // Remove mega container from DOM
+     if (this.elements.megaContainer) {
+       this.elements.megaContainer.remove();
+     }
+     
+     // Restore original header theme if needed
+     if (this.elements.header && this.state.headerTheme) {
+       this.elements.header.setAttribute('data-section-theme', this.state.headerTheme);
+     }
+     
+     // Restore original mobile menu theme if needed (only if showOnMobile is true)
+     if (this.config.showOnMobile && this.elements.headerMenu && this.state.headerMobileTheme) {
+       this.elements.headerMenu.setAttribute('data-section-theme', this.state.headerMobileTheme);
+     }
+     
+     // Remove from instance tracking
+     if (window.megaMenuInstances) {
+       window.megaMenuInstances.delete(this);
+     }
+     
+     // Clear references to allow garbage collection
+     this.handlers = null;
+     this.elements = null;
+     this.config = null;
+     this.state.initialized = false;
+   }
   }
   
   // Expose to global scope
