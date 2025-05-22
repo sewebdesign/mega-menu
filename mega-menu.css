@@ -110,8 +110,20 @@ body:is(.sqs-edit-mode-active,.sqs-site-styles-active) #mega-container {
 
 /* Dynamic Header BG Color Adjustement */
 .tweak-fixed-header [data-header-style="dynamic"]#header:has(.mega-link) {
-    transition: background 140ms ease-in-out 0ms, transform 140ms ease-in-out;
+    transition: background-color 140ms ease-in-out 0ms, transform 140ms ease-in-out;
 }
+
+.cse-adaptive-theme #header:has(.mega-link[aria-expanded="true"]):not(.shrink,[data-section-theme=""]) {
+  background-color: var(--siteBackgroundColor)!important;
+}
+
+.cse-adaptive-theme .mega-menu-item {
+  padding-top: var(--csemegaheaderheight) !important;
+}
+.cse-adaptive-theme .mega-menu-item .page-section:first-child {
+  padding-top: 0!important;
+}
+
 
 /* Mobile Styles */
 #header [data-folder]:has(.mobile-mega-content) .header-menu-nav-folder-content > div:not(:first-child) {
