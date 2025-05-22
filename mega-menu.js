@@ -1,4 +1,4 @@
- (function() {
+(function() {
   'use strict';
 
   /**
@@ -94,7 +94,7 @@
       
       // Set up mobile menu folder change observer - only if showOnMobile is true
       if (config.showOnMobile) {
-        setupMobileFolderObserver();
+        setupMobileMenuObserver();
       }
       
       // Mark as initialized
@@ -210,10 +210,10 @@
           // Process the menu content
           processMenuContent(menuContainer, element, linkPath, html);
           
-          // Add the same content to mobile menu if showOnMobile is true and a matching folder exists
-          if (config.showOnMobile) {
-            addContentToMobileMenu(linkPath, html);
-          }
+          // Don't add mobile content during initial load - we'll do it when menu opens
+          // if (config.showOnMobile) {
+          //   addContentToMobileMenu(linkPath, html);
+          // }
         } catch (error) {
           console.error(`Error loading mega menu content:`, error);
         }
@@ -336,7 +336,39 @@
     }
     
     /**
-     * Add mega menu content to mobile menu
+     * Set up observer for mobile folder changes (called after mobile content is loaded)
+     */
+    function setupMobileFolderObserver() {
+      // Skip if showOnMobile is false
+      if (!config.showOnMobile || !elements.headerMenu) return;
+      
+      // Create a mutation observer to detect mobile folder active class changes
+      const observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+          if (mutation.type === 'attributes' && 
+              mutation.attributeName === 'class' && 
+              mutation.target.classList.contains('header-menu-nav-folder')) {
+            
+            // Handle folder class change
+            handleMobileFolderChange(mutation.target);
+          }
+        }
+      });
+      
+      // Start observing all mobile folders
+      elements.mobileFolders.forEach(folder => {
+        observer.observe(folder, {
+          attributes: true,
+          attributeFilter: ['class']
+        });
+      });
+      
+      // Store observer reference for cleanup
+      megaMenuInstance.mobileFolderObserver = observer;
+    }
+    
+    /**
+     * Add mega menu content to mobile menu (modified to work with existing content)
      * @param {string} linkPath - The path of the link
      * @param {string} html - The HTML content of the menu
      */
@@ -351,10 +383,15 @@
       
       if (!mobileFolder) return;
       
-      // Parse the HTML
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, 'text/html');
-      const firstSection = doc.querySelector('#page .page-section');
+      // Check if content already exists (avoid duplicates)
+      if (mobileFolder.querySelector('.mobile-mega-content')) return;
+      
+      // Parse the HTML from the desktop menu container
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = html;
+      const firstSection = tempDiv.querySelector('.page-section');
+      
+      if (!firstSection) return;
       
       // Create a container for the mega content
       const mobileMenuContainer = document.createElement('div');
@@ -362,14 +399,12 @@
       mobileMenuContainer.setAttribute('data-mega-path', linkPath);
       
       // Store the section theme from the first section for later use
-      if (firstSection) {
-        const sectionTheme = firstSection.getAttribute('data-section-theme');
-        if (sectionTheme) {
-          mobileMenuContainer.setAttribute('data-section-theme', sectionTheme);
-        }
-      }  
-
-      // Insert only the first section
+      const sectionTheme = firstSection.getAttribute('data-section-theme');
+      if (sectionTheme) {
+        mobileMenuContainer.setAttribute('data-section-theme', sectionTheme);
+      }
+      
+      // Insert the section
       mobileMenuContainer.appendChild(firstSection.cloneNode(true));
       
       //Add .btn class to all mega mobile button blocks
@@ -380,13 +415,22 @@
       
       mobileFolder.appendChild(mobileMenuContainer);
       
-      // Initialize Squarespace blocks if needed
-      if (window.Squarespace && window.Y) {
-        try {
-          window.Squarespace.initializePageContent(window.Y, window.Y.one(mobileMenuContainer));
-        } catch (err) {
-          console.warn('Failed to initialize Squarespace blocks in mobile menu:', err);
+      // Initialize Squarespace blocks if needed (using requestIdleCallback for better performance)
+      const initializeBlocks = () => {
+        if (window.Squarespace && window.Y) {
+          try {
+            window.Squarespace.initializePageContent(window.Y, window.Y.one(mobileMenuContainer));
+          } catch (err) {
+            console.warn('Failed to initialize Squarespace blocks in mobile menu:', err);
+          }
         }
+      };
+      
+      // Use requestIdleCallback if available, otherwise use setTimeout
+      if (window.requestIdleCallback) {
+        requestIdleCallback(initializeBlocks);
+      } else {
+        setTimeout(initializeBlocks, 0);
       }
     }
     
@@ -699,35 +743,94 @@
     }
     
     /**
-     * Set up observer for mobile folder changes
+     * Set up observer for mobile menu open/close and lazy load content
      */
-    function setupMobileFolderObserver() {
+    function setupMobileMenuObserver() {
       // Skip if showOnMobile is false
       if (!config.showOnMobile || !elements.headerMenu) return;
       
-      // Create a mutation observer to detect mobile folder active class changes
+      // Create observer to watch for mobile menu open/close
       const observer = new MutationObserver((mutations) => {
         for (const mutation of mutations) {
           if (mutation.type === 'attributes' && 
               mutation.attributeName === 'class' && 
-              mutation.target.classList.contains('header-menu-nav-folder')) {
+              mutation.target === elements.container) {
             
-            // Handle folder class change
-            handleMobileFolderChange(mutation.target);
+            if (elements.container.classList.contains('header--menu-open')) {
+              // Menu opened - load mobile content
+              loadMobileContent();
+            } else {
+              // Menu closed - clean up mobile content
+              cleanupMobileContent();
+            }
           }
         }
       });
       
-      // Start observing all mobile folders
-      elements.mobileFolders.forEach(folder => {
-        observer.observe(folder, {
-          attributes: true,
-          attributeFilter: ['class']
-        });
+      // Watch for mobile menu state changes
+      observer.observe(elements.container, {
+        attributes: true,
+        attributeFilter: ['class']
       });
       
       // Store observer reference for cleanup
-      megaMenuInstance.mobileFolderObserver = observer;
+      megaMenuInstance.mobileMenuObserver = observer;
+    }
+    
+    /**
+     * Load mobile content when menu opens
+     */
+    function loadMobileContent() {
+      // Use requestIdleCallback for better performance if available
+      const loadContent = () => {
+        elements.menuLinks.forEach(element => {
+          const linkPath = element.getAttribute("data-mega-path").slice(1);
+          const menuContainer = document.getElementById(linkPath);
+          
+          if (menuContainer) {
+            // Get the HTML from the existing menu container
+            const html = menuContainer.innerHTML;
+            
+            // Add content to mobile menu
+            addContentToMobileMenu(linkPath, html);
+          }
+        });
+        
+        // Set up folder change observer after content is loaded
+        setupMobileFolderObserver();
+      };
+      
+      // Use requestIdleCallback if available, otherwise use setTimeout
+      if (window.requestIdleCallback) {
+        requestIdleCallback(loadContent);
+      } else {
+        setTimeout(loadContent, 0);
+      }
+    }
+    
+    /**
+     * Clean up mobile content when menu closes
+     */
+    function cleanupMobileContent() {
+      // Disconnect folder observer
+      if (megaMenuInstance.mobileFolderObserver) {
+        megaMenuInstance.mobileFolderObserver.disconnect();
+        megaMenuInstance.mobileFolderObserver = null;
+      }
+      
+      // Remove all mobile mega content
+      elements.mobileFolders.forEach(folder => {
+        const mobileContents = folder.querySelectorAll('.mobile-mega-content');
+        mobileContents.forEach(content => {
+          content.remove();
+        });
+      });
+      
+      // Restore original mobile menu theme
+      if (elements.headerMenu && state.headerMobileTheme) {
+        elements.headerMenu.setAttribute('data-section-theme', state.headerMobileTheme);
+        elements.header.setAttribute('data-section-theme', state.headerMobileTheme);
+      }
     }
     
     /**
@@ -866,6 +969,12 @@
         });
       }
       
+      // Disconnect mobile menu observer if showOnMobile is true
+      if (config.showOnMobile && megaMenuInstance.mobileMenuObserver) {
+        megaMenuInstance.mobileMenuObserver.disconnect();
+        megaMenuInstance.mobileMenuObserver = null;
+      }
+      
       // Disconnect mobile folder observer if showOnMobile is true
       if (config.showOnMobile && megaMenuInstance.mobileFolderObserver) {
         megaMenuInstance.mobileFolderObserver.disconnect();
@@ -914,6 +1023,7 @@
       elements,
       destroy,
       editModeObserver: null,
+      mobileMenuObserver: null,
       mobileFolderObserver: null
     };
     
