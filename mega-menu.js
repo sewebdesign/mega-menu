@@ -1,4 +1,4 @@
-(function() {
+ (function() {
   'use strict';
 
   /**
@@ -511,8 +511,10 @@
               if (config.adaptiveHeaderTheme.toLowerCase() === 'transparent') {
                 // Keep the header transparent - don't change the theme
               } else {
-                // Apply the user-specified theme
-                elements.header.setAttribute('data-section-theme', config.adaptiveHeaderTheme);
+                // For color themes, only apply if header doesn't have shrink class
+                if (!elements.header.classList.contains('shrink')) {
+                  elements.header.setAttribute('data-section-theme', config.adaptiveHeaderTheme);
+                }
               }
             } else {
               // Default behavior: use the menu's theme
@@ -625,6 +627,11 @@
         if (elements.megaContainer) {
           elements.megaContainer.classList.remove('mega-inset-click');
         }
+      }
+      
+      // Add adaptive theme class if adaptiveHeaderTheme is set
+      if (config.adaptiveHeaderTheme) {
+        document.body.classList.add('cse-adaptive-theme');
       }
     }
     
@@ -884,6 +891,11 @@
       // Restore original mobile menu theme if needed (only if showOnMobile is true)
       if (config.showOnMobile && elements.headerMenu && state.headerMobileTheme) {
         elements.headerMenu.setAttribute('data-section-theme', state.headerMobileTheme);
+      }
+      
+      // Remove adaptive theme class if it was added
+      if (config.adaptiveHeaderTheme) {
+        document.body.classList.remove('cse-adaptive-theme');
       }
       
       // Remove from instance tracking
