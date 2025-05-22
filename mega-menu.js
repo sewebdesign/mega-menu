@@ -519,6 +519,11 @@
      * @param {boolean} shouldFocus - Whether to focus the first menu item
      */
     function openMenu(trigger, menu, shouldFocus = true) {
+      // Check if this menu is already open (prevent duplicate calls)
+      if (state.activeMenuId === menu.id) {
+        return; // Exit early if menu is already open
+      }
+      
       // First close any open menu
       if (state.activeMenuId && state.activeMenuId !== menu.id) {
         const currentTrigger = document.querySelector(`.mega-link[aria-controls="${state.activeMenuId}"]`);
@@ -547,26 +552,26 @@
         
         // Handle adaptive theme if needed
         const firstSection = menu.querySelector('.page-section:first-child');
-        if (firstSection) {        
-          if (elements.header && elements.header.getAttribute('data-header-style') === 'dynamic') {
-            // Check if user has specified a custom adaptive header theme
-            if (config.adaptiveHeaderTheme) {
-              // If user specified 'transparent' or 'Transparent', don't apply any theme
-              if (config.adaptiveHeaderTheme.toLowerCase() === 'transparent') {
-                // Keep the header transparent - don't change the theme
-              } else {
-                // For color themes, only apply if header doesn't have shrink class
-                if (!elements.header.classList.contains('shrink')) {
-                  elements.header.setAttribute('data-section-theme', config.adaptiveHeaderTheme);
-                }
-              }
+        if (firstSection && elements.header) {
+          // Check if user has specified a custom adaptive header theme
+          if (config.adaptiveHeaderTheme) {
+            // If user specified 'transparent' or 'Transparent', add cse-transparent class
+            if (config.adaptiveHeaderTheme.toLowerCase() === 'transparent') {
+              elements.header.classList.add('cse-transparent');
+              // REMOVE the existing theme for transparent mode
             } else {
-              // Default behavior: use the menu's theme
-              const menuTheme = menu.getAttribute('data-section-theme') || 
-                                firstSection.getAttribute('data-section-theme');
-              if (menuTheme) {
-                elements.header.setAttribute('data-section-theme', menuTheme);
+              // For color themes, only apply if header doesn't have shrink class and is dynamic
+              if (elements.header.getAttribute('data-header-style') === 'dynamic' && 
+                  !elements.header.classList.contains('shrink')) {
+                elements.header.setAttribute('data-section-theme', config.adaptiveHeaderTheme);
               }
+            }
+          } else if (elements.header.getAttribute('data-header-style') === 'dynamic') {
+            // DEFAULT BEHAVIOR: use the menu's theme only for dynamic headers
+            const menuTheme = menu.getAttribute('data-section-theme') || 
+                              firstSection.getAttribute('data-section-theme');
+            if (menuTheme) {
+              elements.header.setAttribute('data-section-theme', menuTheme);
             }
           }
         }
@@ -628,9 +633,17 @@
         menu.classList.remove('active');
         
         // Restore header theme if needed
-        if (elements.header && elements.header.getAttribute('data-header-style') === 'dynamic') {
-          // Only restore original theme if we're not using 'transparent' option
-          if (!config.adaptiveHeaderTheme || config.adaptiveHeaderTheme.toLowerCase() !== 'transparent') {
+        if (elements.header) {
+          // Check if adaptiveHeaderTheme is transparent
+          if (config.adaptiveHeaderTheme && config.adaptiveHeaderTheme.toLowerCase() === 'transparent') {
+            // Remove the cse-transparent class when closing
+            elements.header.classList.remove('cse-transparent');
+            // Restore the original header theme
+            if (state.headerTheme) {
+              elements.header.setAttribute('data-section-theme', state.headerTheme);
+            }
+          } else if (elements.header.getAttribute('data-header-style') === 'dynamic') {
+            // For other themes, restore original theme only for dynamic headers
             elements.header.setAttribute('data-section-theme', state.headerTheme);
           }
         }
@@ -995,6 +1008,11 @@
       // Restore original header theme if needed
       if (elements.header && state.headerTheme) {
         elements.header.setAttribute('data-section-theme', state.headerTheme);
+      }
+      
+      // Remove cse-transparent class if it was added
+      if (elements.header && config.adaptiveHeaderTheme && config.adaptiveHeaderTheme.toLowerCase() === 'transparent') {
+        elements.header.classList.remove('cse-transparent');
       }
       
       // Restore original mobile menu theme if needed (only if showOnMobile is true)
