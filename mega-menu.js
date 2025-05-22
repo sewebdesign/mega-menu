@@ -12,7 +12,8 @@
       folderClickThrough: false, // Allow folder links to be clickable
       showOnMobile: true,        // Show mega menu content in mobile menu
       menuWidth: 'full',         // 'full' or 'inset'
-      memberLinks: []            // Member area links            
+      memberLinks: [],           // Member area links
+      adaptiveHeaderTheme: null  // Custom theme for adaptive/dynamic headers when menus are open
     };
     
     // Merge provided options with defaults
@@ -504,10 +505,22 @@
         const firstSection = menu.querySelector('.page-section:first-child');
         if (firstSection) {        
           if (elements.header && elements.header.getAttribute('data-header-style') === 'dynamic') {
-            const menuTheme = menu.getAttribute('data-section-theme') || 
-                              firstSection.getAttribute('data-section-theme');
-            if (menuTheme) {
-              elements.header.setAttribute('data-section-theme', menuTheme);
+            // Check if user has specified a custom adaptive header theme
+            if (config.adaptiveHeaderTheme) {
+              // If user specified 'transparent' or 'Transparent', don't apply any theme
+              if (config.adaptiveHeaderTheme.toLowerCase() === 'transparent') {
+                // Keep the header transparent - don't change the theme
+              } else {
+                // Apply the user-specified theme
+                elements.header.setAttribute('data-section-theme', config.adaptiveHeaderTheme);
+              }
+            } else {
+              // Default behavior: use the menu's theme
+              const menuTheme = menu.getAttribute('data-section-theme') || 
+                                firstSection.getAttribute('data-section-theme');
+              if (menuTheme) {
+                elements.header.setAttribute('data-section-theme', menuTheme);
+              }
             }
           }
         }
@@ -570,7 +583,10 @@
         
         // Restore header theme if needed
         if (elements.header && elements.header.getAttribute('data-header-style') === 'dynamic') {
-          elements.header.setAttribute('data-section-theme', state.headerTheme);
+          // Only restore original theme if we're not using 'transparent' option
+          if (!config.adaptiveHeaderTheme || config.adaptiveHeaderTheme.toLowerCase() !== 'transparent') {
+            elements.header.setAttribute('data-section-theme', state.headerTheme);
+          }
         }
       });
       
