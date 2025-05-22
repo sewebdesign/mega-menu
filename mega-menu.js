@@ -2,92 +2,66 @@
   'use strict';
 
   /**
-   * MegaMenu constructor
+   * MegaMenu function
    * @param {Object} options - Configuration options for the mega menu
    */
-  class MegaMenu {
-    constructor(options = {}) {
-      // Default configuration
-      this.config = {
-        clickToShow: false,        // Use click instead of hover to open menus
-        folderClickThrough: false, // Allow folder links to be clickable
-        showOnMobile: true,        // Show mega menu content in mobile menu
-        menuWidth: 'full',         // 'full' or 'inset'
-        memberLinks: []            // Member area links            
-      };
-      
-      // Merge provided options with defaults
-      Object.assign(this.config, options);
-      
-      // State tracking
-      this.state = {
-        initialized: false,
-        activeMenuId: null,
-        headerHeight: null,
-        headerTheme: null,
-        headerMobileTheme: null,  
-        loadedMenus: new Set(),
-        isInIframe: window.self !== window.top,
-        isTouchDevice: this.detectTouchDevice()
-      };
-      
-      // DOM element cache
-      this.elements = {
-        header: null,
-        headerMenu: null,          // Added headerMenu element
-        container: null,
-        megaContainer: null,
-        menuLinks: [],
-        mobileFolders: []          // Added mobile folders
-      };
-      
-      // Store timeouts for proper cleanup
-      this.timeouts = [];
-      
-      // Utility functions
-      this.utils = {
-        // Debounce function for performance optimization
-        debounce: (func, wait) => {
-          let timeout;
-          return function() {
-            const context = this;
-            const args = arguments;
-            clearTimeout(timeout);
-            timeout = setTimeout(() => func.apply(context, args), wait);
-          };
-        }
-      };
-      
-      // Event handlers object to store references for proper cleanup
-      this.handlers = {
-        keydown: this.handleKeyDown.bind(this),
-        click: this.handleDocumentClick.bind(this),
-        scroll: this.handleScroll.bind(this),
-        mobileFolderChange: this.handleMobileFolderChange.bind(this) // Added handler for mobile folders
-      };
-      
-      // Use debounced version for resize handler
-      this.handlers.resize = this.utils.debounce(this.handleResize.bind(this), 100);
-      
-      // Add to instance tracking for proper cleanup
-      if (!window.megaMenuInstances) {
-        window.megaMenuInstances = new Set();
+  function MegaMenu(options = {}) {
+    // Default configuration
+    const config = {
+      clickToShow: false,        // Use click instead of hover to open menus
+      folderClickThrough: false, // Allow folder links to be clickable
+      showOnMobile: true,        // Show mega menu content in mobile menu
+      menuWidth: 'full',         // 'full' or 'inset'
+      memberLinks: []            // Member area links            
+    };
+    
+    // Merge provided options with defaults
+    Object.assign(config, options);
+    
+    // State tracking
+    const state = {
+      initialized: false,
+      activeMenuId: null,
+      headerHeight: null,
+      headerTheme: null,
+      headerMobileTheme: null,  
+      loadedMenus: new Set(),
+      isInIframe: window.self !== window.top,
+      isTouchDevice: detectTouchDevice()
+    };
+    
+    // DOM element cache
+    const elements = {
+      header: null,
+      headerMenu: null,          // Added headerMenu element
+      container: null,
+      megaContainer: null,
+      menuLinks: [],
+      mobileFolders: []          // Added mobile folders
+    };
+    
+    // Store timeouts for proper cleanup
+    const timeouts = [];
+    
+    // Utility functions
+    const utils = {
+      // Debounce function for performance optimization
+      debounce: (func, wait) => {
+        let timeout;
+        return function() {
+          const context = this;
+          const args = arguments;
+          clearTimeout(timeout);
+          timeout = setTimeout(() => func.apply(context, args), wait);
+        };
       }
-      window.megaMenuInstances.add(this);
-      
-      // Initialize when DOM is ready
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', this.init.bind(this));
-      } else {
-        this.init();
-      }
-    }
+    };
     
     /**
      * Detect if the device is a touch device (no mouse cursor)
      * @returns {boolean} - True if the device is a touch device
      */
-    detectTouchDevice() {
+    function detectTouchDevice() {
       // Primary check: Does the device support touch events?
       const hasTouchEvents = 'ontouchstart' in window || 
                             navigator.maxTouchPoints > 0 ||
@@ -98,59 +72,59 @@
     /**
      * Initialize the mega menu system
      */
-    init() {
+    function init() {
       // Cache DOM elements
-      this.cacheElements();
+      cacheElements();
       
       // Create mega container
-      this.createMegaContainer();
+      createMegaContainer();
       
       // Apply menu width setting to body
-      this.applyMenuWidthClass();
+      applyMenuWidthClass();
       
       // Find and process mega menu links
-      this.processMegaLinks();
+      processMegaLinks();
       
       // Set up global event listeners
-      this.setupGlobalListeners();
+      setupGlobalListeners();
       
       // Set up observer for edit mode
-      this.setupEditModeObserver();
+      setupEditModeObserver();
       
       // Set up mobile menu folder change observer - only if showOnMobile is true
-      if (this.config.showOnMobile) {
-        this.setupMobileFolderObserver();
+      if (config.showOnMobile) {
+        setupMobileFolderObserver();
       }
       
       // Mark as initialized
-      this.state.initialized = true;
+      state.initialized = true;
     }
     
     /**
      * Cache frequently accessed DOM elements
      */
-    cacheElements() {
-      this.elements.header = document.querySelector('#header');
-      this.elements.container = document.querySelector('body');
+    function cacheElements() {
+      elements.header = document.querySelector('#header');
+      elements.container = document.querySelector('body');
       
       // Store header theme for later
-      if (this.elements.header) {
-        this.state.headerTheme = this.elements.header.getAttribute('data-section-theme');
+      if (elements.header) {
+        state.headerTheme = elements.header.getAttribute('data-section-theme');
       }
       
       // Only cache mobile-related elements if showOnMobile is true
-      if (this.config.showOnMobile) {
-        this.elements.headerMenu = document.querySelector('#header .header-menu');
+      if (config.showOnMobile) {
+        elements.headerMenu = document.querySelector('#header .header-menu');
         
         // Store mobile header theme
-        if (this.elements.headerMenu) {
-          this.state.headerMobileTheme = this.elements.headerMenu.getAttribute('data-section-theme');
+        if (elements.headerMenu) {
+          state.headerMobileTheme = elements.headerMenu.getAttribute('data-section-theme');
         }
         
         // Find mobile menu folders that correspond to mega menus
-        if (this.elements.headerMenu) {
-          this.elements.mobileFolders = Array.from(
-            this.elements.headerMenu.querySelectorAll('.header-menu-nav-folder[data-folder^="/mega-"]')
+        if (elements.headerMenu) {
+          elements.mobileFolders = Array.from(
+            elements.headerMenu.querySelectorAll('.header-menu-nav-folder[data-folder^="/mega-"]')
           );
         }
       }
@@ -159,24 +133,23 @@
     /**
      * Create the mega menu container
      */
-    createMegaContainer() {
-      this.elements.megaContainer = document.createElement('div');
-      this.elements.megaContainer.id = 'mega-container';
+    function createMegaContainer() {
+      elements.megaContainer = document.createElement('div');
+      elements.megaContainer.id = 'mega-container';
       
       // Append to body
-      document.body.appendChild(this.elements.megaContainer);
-      
+      document.body.appendChild(elements.megaContainer);
     }
     
     /**
      * Find and process all potential mega menu links
      */
-    processMegaLinks() {
+    function processMegaLinks() {
       // Get standard mega links
       const megaLinks = Array.from(document.querySelectorAll('.header-display-desktop .header-nav-folder-title[href^="/mega-"]'));
       
       // Process member area links if any
-      const memberLinks = this.config.memberLinks.map(memberLinkId => {
+      const memberLinks = config.memberLinks.map(memberLinkId => {
         const memberLink = document.querySelector(`.header-display-desktop .header-nav-folder-title[href="${memberLinkId}"]`);
         if (memberLink) {
           memberLink.setAttribute('data-mega-path', '/mega-' + memberLinkId);
@@ -192,18 +165,18 @@
       });
       
       // Combine all mega links
-      this.elements.menuLinks = [...megaLinks, ...memberLinks];
+      elements.menuLinks = [...megaLinks, ...memberLinks];
       
       // Load all menu content
-      this.loadAllMenuContent();
+      loadAllMenuContent();
     }
     
     /**
      * Preload all menu content
      */
-    async loadAllMenuContent() {
+    async function loadAllMenuContent() {
       // Process each mega link
-      for (const element of this.elements.menuLinks) {
+      for (const element of elements.menuLinks) {
         try {
           const linkPath = element.getAttribute("data-mega-path").slice(1);
           const isMemberLink = element.classList.contains('member-link');
@@ -212,7 +185,7 @@
           const menuContainer = document.createElement('div');
           menuContainer.id = linkPath;
           menuContainer.className = 'mega-menu-item';
-          this.elements.megaContainer.appendChild(menuContainer);
+          elements.megaContainer.appendChild(menuContainer);
           
           // Determine page path
           let megaPagePath;
@@ -234,19 +207,17 @@
           const html = await response.text();
           
           // Process the menu content
-          this.processMenuContent(menuContainer, element, linkPath, html);
+          processMenuContent(menuContainer, element, linkPath, html);
           
           // Add the same content to mobile menu if showOnMobile is true and a matching folder exists
-          if (this.config.showOnMobile) {
-            this.addContentToMobileMenu(linkPath, html);
+          if (config.showOnMobile) {
+            addContentToMobileMenu(linkPath, html);
           }
         } catch (error) {
           console.error(`Error loading mega menu content:`, error);
         }
       }
     }
-    
- 
     
     /**
      * Process loaded menu content
@@ -255,9 +226,9 @@
      * @param {string} linkPath - The path of the link
      * @param {string} html - The HTML content of the menu
      */
-    processMenuContent(container, trigger, linkPath, html) {
+    function processMenuContent(container, trigger, linkPath, html) {
       // Check if this menu has already been initialized to prevent duplicate setup
-      if (this.state.loadedMenus.has(linkPath)) {
+      if (state.loadedMenus.has(linkPath)) {
         console.warn(`Menu ${linkPath} already initialized, skipping redundant setup`);
         return;
       }
@@ -293,20 +264,19 @@
         
         // Mark as loaded
         container.classList.add('mega-menu-loaded');
-        this.state.loadedMenus.add(linkPath);
+        state.loadedMenus.add(linkPath);
       });
       
       // Set up the menu trigger
-      this.setupMenuTrigger(trigger, linkPath);
+      setupMenuTrigger(trigger, linkPath);
     }
     
-  
     /**
      * Set up event listeners based on configuration
      * @param {HTMLElement} trigger - The trigger element
      * @param {string} menuId - The ID of the menu to open
      */
-    setupMenuTrigger(trigger, menuId) {
+    function setupMenuTrigger(trigger, menuId) {
       // Set up common attributes for accessibility
       trigger.classList.add('mega-link');
       trigger.setAttribute('aria-haspopup', 'true');
@@ -321,33 +291,33 @@
       menu.setAttribute('aria-hidden', 'true');
       
       // Set initial tabindex for all links
-      const menuLinks = this.findFocusableElements(menu);
+      const menuLinks = findFocusableElements(menu);
       menuLinks.forEach(link => {
         link.setAttribute('tabindex', '-1');
       });
       
       // Set up event listeners based on configuration
-      if (this.config.clickToShow === true || this.config.clickToShow === 'true') {
+      if (config.clickToShow === true || config.clickToShow === 'true') {
         // Click to open/close
         trigger.addEventListener('click', (event) => {
           event.preventDefault();
-          this.toggleMenu(trigger, menu);
+          toggleMenu(trigger, menu);
         });
       } else {
         // Hover to open/close
         const parentElement = trigger.parentElement;
         
-        parentElement.addEventListener('mouseenter', () => this.openMenu(trigger, menu, false), { passive: true });
-        parentElement.addEventListener('mouseleave', () => this.closeMenu(trigger, menu, false), { passive: true });
+        parentElement.addEventListener('mouseenter', () => openMenu(trigger, menu, false), { passive: true });
+        parentElement.addEventListener('mouseleave', () => closeMenu(trigger, menu, false), { passive: true });
         
         // Also handle menu hover
-        menu.addEventListener('mouseenter', () => this.openMenu(trigger, menu, false), { passive: true });
-        menu.addEventListener('mouseleave', () => this.closeMenu(trigger, menu, false), { passive: true });
+        menu.addEventListener('mouseenter', () => openMenu(trigger, menu, false), { passive: true });
+        menu.addEventListener('mouseleave', () => closeMenu(trigger, menu, false), { passive: true });
       }
       
       // Handle folder click-through if enabled for hover mode
-      if ((this.config.folderClickThrough === true || this.config.folderClickThrough === 'true') && 
-          !(this.config.clickToShow === true || this.config.clickToShow === 'true') && 
+      if ((config.folderClickThrough === true || config.folderClickThrough === 'true') && 
+          !(config.clickToShow === true || config.clickToShow === 'true') && 
           !trigger.classList.contains('member-link')) {
         trigger.addEventListener('click', function(event) {
           const locationLink = this.getAttribute("href").slice(6);
@@ -359,22 +329,22 @@
       trigger.addEventListener('keydown', (event) => {
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
-          this.toggleMenu(trigger, menu);
+          toggleMenu(trigger, menu);
         }
       });
     }
     
-       /**
+    /**
      * Add mega menu content to mobile menu
      * @param {string} linkPath - The path of the link
      * @param {string} html - The HTML content of the menu
      */
-    addContentToMobileMenu(linkPath, html) {
+    function addContentToMobileMenu(linkPath, html) {
       // Skip if showOnMobile is false
-      if (this.config.showOnMobile === false || this.config.showOnMobile === 'false') return;
+      if (config.showOnMobile === false || config.showOnMobile === 'false') return;
       
       // Find the corresponding mobile folder
-      const mobileFolder = this.elements.mobileFolders.find(folder => 
+      const mobileFolder = elements.mobileFolders.find(folder => 
         folder.getAttribute('data-folder') === `/${linkPath}`
       );
       
@@ -399,7 +369,7 @@
       }  
 
       // Insert only the first section
-        mobileMenuContainer.appendChild(firstSection.cloneNode(true));
+      mobileMenuContainer.appendChild(firstSection.cloneNode(true));
       
       //Add .btn class to all mega mobile button blocks
       const buttonBlocks = mobileMenuContainer.querySelectorAll('.button-block a');
@@ -409,24 +379,22 @@
       
       mobileFolder.appendChild(mobileMenuContainer);
       
-          // Initialize Squarespace blocks if needed
+      // Initialize Squarespace blocks if needed
       if (window.Squarespace && window.Y) {
         try {
-window.Squarespace.initializePageContent(window.Y, window.Y.one(mobileMenuContainer));
-        
+          window.Squarespace.initializePageContent(window.Y, window.Y.one(mobileMenuContainer));
         } catch (err) {
           console.warn('Failed to initialize Squarespace blocks in mobile menu:', err);
         }
       }
     }
     
-    
     /**
      * Find all focusable elements within a container
      * @param {HTMLElement} container - The container element
      * @returns {Array} - Array of focusable elements
      */
-    findFocusableElements(container) {
+    function findFocusableElements(container) {
       // These selectors cover all elements that can receive focus
       return Array.from(container.querySelectorAll(
         'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), ' + 
@@ -440,14 +408,14 @@ window.Squarespace.initializePageContent(window.Y, window.Y.one(mobileMenuContai
      * @param {HTMLElement} menu - The menu element
      * @param {HTMLElement} trigger - The trigger element
      */
-    setupKeyboardTrap(menu, trigger) {
+    function setupKeyboardTrap(menu, trigger) {
       // Remove any existing handler
-      this.removeKeyboardTrap(menu);
+      removeKeyboardTrap(menu);
       
       // Create the handler
       const keyboardTrapHandler = (event) => {
         if (event.key === 'Tab') {
-          const focusableElements = this.findFocusableElements(menu);
+          const focusableElements = findFocusableElements(menu);
           
           if (focusableElements.length === 0) return;
           
@@ -464,7 +432,7 @@ window.Squarespace.initializePageContent(window.Y, window.Y.one(mobileMenuContai
           }
         } else if (event.key === 'Escape') {
           event.preventDefault();
-          this.closeMenu(trigger, menu);
+          closeMenu(trigger, menu);
         }
       };
       
@@ -479,7 +447,7 @@ window.Squarespace.initializePageContent(window.Y, window.Y.one(mobileMenuContai
      * Remove a keyboard trap from a menu
      * @param {HTMLElement} menu - The menu element
      */
-    removeKeyboardTrap(menu) {
+    function removeKeyboardTrap(menu) {
       if (menu._keyboardTrapHandler) {
         menu.removeEventListener('keydown', menu._keyboardTrapHandler);
         menu._keyboardTrapHandler = null;
@@ -491,11 +459,11 @@ window.Squarespace.initializePageContent(window.Y, window.Y.one(mobileMenuContai
      * @param {HTMLElement} trigger - The trigger element
      * @param {HTMLElement} menu - The menu element
      */
-    toggleMenu(trigger, menu) {
+    function toggleMenu(trigger, menu) {
       if (trigger.getAttribute('aria-expanded') === 'true') {
-        this.closeMenu(trigger, menu);
+        closeMenu(trigger, menu);
       } else {
-        this.openMenu(trigger, menu);
+        openMenu(trigger, menu);
       }
     }
     
@@ -505,19 +473,19 @@ window.Squarespace.initializePageContent(window.Y, window.Y.one(mobileMenuContai
      * @param {HTMLElement} menu - The menu element
      * @param {boolean} shouldFocus - Whether to focus the first menu item
      */
-    openMenu(trigger, menu, shouldFocus = true) {
+    function openMenu(trigger, menu, shouldFocus = true) {
       // First close any open menu
-      if (this.state.activeMenuId && this.state.activeMenuId !== menu.id) {
-        const currentTrigger = document.querySelector(`.mega-link[aria-controls="${this.state.activeMenuId}"]`);
-        const currentMenu = document.getElementById(this.state.activeMenuId);
+      if (state.activeMenuId && state.activeMenuId !== menu.id) {
+        const currentTrigger = document.querySelector(`.mega-link[aria-controls="${state.activeMenuId}"]`);
+        const currentMenu = document.getElementById(state.activeMenuId);
         
         if (currentTrigger && currentMenu) {
-          this.closeMenu(currentTrigger, currentMenu, false);
+          closeMenu(currentTrigger, currentMenu, false);
         }
       }
       
       // Update header height if needed
-      this.updateHeaderHeight();
+      updateHeaderHeight();
       
       // Use requestAnimationFrame for DOM updates to optimize performance
       requestAnimationFrame(() => {
@@ -527,7 +495,7 @@ window.Squarespace.initializePageContent(window.Y, window.Y.one(mobileMenuContai
         menu.classList.add('active');
         
         // Set tabindex for all links
-        const menuLinks = this.findFocusableElements(menu);
+        const menuLinks = findFocusableElements(menu);
         menuLinks.forEach(link => {
           link.setAttribute('tabindex', '0');
         });
@@ -535,37 +503,37 @@ window.Squarespace.initializePageContent(window.Y, window.Y.one(mobileMenuContai
         // Handle adaptive theme if needed
         const firstSection = menu.querySelector('.page-section:first-child');
         if (firstSection) {        
-          if (this.elements.header && this.elements.header.getAttribute('data-header-style') === 'dynamic') {
+          if (elements.header && elements.header.getAttribute('data-header-style') === 'dynamic') {
             const menuTheme = menu.getAttribute('data-section-theme') || 
                               firstSection.getAttribute('data-section-theme');
             if (menuTheme) {
-              this.elements.header.setAttribute('data-section-theme', menuTheme);
+              elements.header.setAttribute('data-section-theme', menuTheme);
             }
           }
         }
         
         // Set up keyboard trap on menu
-        this.setupKeyboardTrap(menu, trigger);
+        setupKeyboardTrap(menu, trigger);
       });
       
       // Focus first link if requested
       if (shouldFocus) {
         const timeoutId = setTimeout(() => {
-          const focusableElements = this.findFocusableElements(menu);
+          const focusableElements = findFocusableElements(menu);
           if (focusableElements.length > 0) {
             focusableElements[0].focus();
           }
         }, 50);
         
         // Store timeout reference for cleanup
-        this.timeouts.push(timeoutId);
+        timeouts.push(timeoutId);
       }
       
       // Always add scroll listener - hide on scroll is now always enabled
-      window.addEventListener('scroll', this.handlers.scroll, { passive: true });
+      window.addEventListener('scroll', handleScroll, { passive: true });
       
       // Track active menu
-      this.state.activeMenuId = menu.id;
+      state.activeMenuId = menu.id;
     }
     
     /**
@@ -574,9 +542,9 @@ window.Squarespace.initializePageContent(window.Y, window.Y.one(mobileMenuContai
      * @param {HTMLElement} menu - The menu element
      * @param {boolean} shouldFocus - Whether to focus the trigger element
      */
-    closeMenu(trigger, menu, shouldFocus = true) {
+    function closeMenu(trigger, menu, shouldFocus = true) {
       // Remove keyboard trap from menu
-      this.removeKeyboardTrap(menu);
+      removeKeyboardTrap(menu);
       
       // Check if focus is within the menu
       const isMenuContainsFocus = menu.contains(document.activeElement);
@@ -590,7 +558,7 @@ window.Squarespace.initializePageContent(window.Y, window.Y.one(mobileMenuContai
       requestAnimationFrame(() => {
         // Reset tabindex for all links before setting aria-hidden
         // This ensures no focusable elements remain in the hidden menu
-        const menuLinks = this.findFocusableElements(menu);
+        const menuLinks = findFocusableElements(menu);
         menuLinks.forEach(link => {
           link.setAttribute('tabindex', '-1');
         });
@@ -601,8 +569,8 @@ window.Squarespace.initializePageContent(window.Y, window.Y.one(mobileMenuContai
         menu.classList.remove('active');
         
         // Restore header theme if needed
-        if (this.elements.header && this.elements.header.getAttribute('data-header-style') === 'dynamic') {
-          this.elements.header.setAttribute('data-section-theme', this.state.headerTheme);
+        if (elements.header && elements.header.getAttribute('data-header-style') === 'dynamic') {
+          elements.header.setAttribute('data-section-theme', state.headerTheme);
         }
       });
       
@@ -614,32 +582,32 @@ window.Squarespace.initializePageContent(window.Y, window.Y.one(mobileMenuContai
         }, 10);
         
         // Store timeout reference for cleanup
-        this.timeouts.push(timeoutId);
+        timeouts.push(timeoutId);
       }
       
       // Always remove scroll listener when menu is closed
-      window.removeEventListener('scroll', this.handlers.scroll);
+      window.removeEventListener('scroll', handleScroll);
       
       // Clear active menu
-      this.state.activeMenuId = null;
+      state.activeMenuId = null;
     }
     
     /**
      * Apply menu width class to body based on configuration
      */
-      applyMenuWidthClass() {
-      if (this.config.menuWidth === 'inset') {
+    function applyMenuWidthClass() {
+      if (config.menuWidth === 'inset') {
         document.body.classList.add('cse-mega-inset');
         
         // Add mega-inset-click class to mega-container if clickToShow is true
-        if (this.elements.megaContainer && 
-            (this.config.clickToShow === true || this.config.clickToShow === 'true')) {
-          this.elements.megaContainer.classList.add('mega-inset-click');
+        if (elements.megaContainer && 
+            (config.clickToShow === true || config.clickToShow === 'true')) {
+          elements.megaContainer.classList.add('mega-inset-click');
         }
       } else {
         document.body.classList.remove('cse-mega-inset');
-        if (this.elements.megaContainer) {
-          this.elements.megaContainer.classList.remove('mega-inset-click');
+        if (elements.megaContainer) {
+          elements.megaContainer.classList.remove('mega-inset-click');
         }
       }
     }
@@ -647,32 +615,32 @@ window.Squarespace.initializePageContent(window.Y, window.Y.one(mobileMenuContai
     /**
      * Update cached header height
      */
-    updateHeaderHeight() {
-      if (this.elements.header) {
-        const headerRect = this.elements.header.getBoundingClientRect();
-    	  this.state.headerHeight = headerRect.height;
-        document.body.style.setProperty('--csemegaheaderheight', `${this.state.headerHeight}px`);
+    function updateHeaderHeight() {
+      if (elements.header) {
+        const headerRect = elements.header.getBoundingClientRect();
+        state.headerHeight = headerRect.height;
+        document.body.style.setProperty('--csemegaheaderheight', `${state.headerHeight}px`);
       }
     }
     
     /**
      * Set up global event listeners
      */
-    setupGlobalListeners() {
+    function setupGlobalListeners() {
       // Window resize handler
-      window.addEventListener('resize', this.handlers.resize, { passive: true });
+      window.addEventListener('resize', utils.debounce(handleResize, 100), { passive: true });
       
       // Document keydown for Escape key
-      document.addEventListener('keydown', this.handlers.keydown);
+      document.addEventListener('keydown', handleKeyDown);
       
       // Document click for closing on outside click
-      document.addEventListener('click', this.handlers.click);
+      document.addEventListener('click', handleDocumentClick);
     }
     
     /**
      * Set up observer for edit mode
      */
-    setupEditModeObserver() {  
+    function setupEditModeObserver() {  
       // Check if page is in an iframe - likely Squarespace edit mode
       const isInIframe = window.self !== window.top;
       
@@ -688,15 +656,15 @@ window.Squarespace.initializePageContent(window.Y, window.Y.one(mobileMenuContai
               mutation.target.classList.contains('sqs-edit-mode-active')) {
             
             // Clean up when entering edit mode
-            this.destroy();
+            destroy();
             break;
           }
         }
       });
       
       // Start observing
-      if (this.elements.container) {
-        observer.observe(this.elements.container, {
+      if (elements.container) {
+        observer.observe(elements.container, {
           attributes: true,
           attributeOldValue: true,
           attributeFilter: ['class']
@@ -704,15 +672,15 @@ window.Squarespace.initializePageContent(window.Y, window.Y.one(mobileMenuContai
       }
       
       // Store observer reference for cleanup
-      this.editModeObserver = observer;
+      megaMenuInstance.editModeObserver = observer;
     }
     
     /**
      * Set up observer for mobile folder changes
      */
-    setupMobileFolderObserver() {
+    function setupMobileFolderObserver() {
       // Skip if showOnMobile is false
-      if (!this.config.showOnMobile || !this.elements.headerMenu) return;
+      if (!config.showOnMobile || !elements.headerMenu) return;
       
       // Create a mutation observer to detect mobile folder active class changes
       const observer = new MutationObserver((mutations) => {
@@ -722,13 +690,13 @@ window.Squarespace.initializePageContent(window.Y, window.Y.one(mobileMenuContai
               mutation.target.classList.contains('header-menu-nav-folder')) {
             
             // Handle folder class change
-            this.handleMobileFolderChange(mutation.target);
+            handleMobileFolderChange(mutation.target);
           }
         }
       });
       
       // Start observing all mobile folders
-      this.elements.mobileFolders.forEach(folder => {
+      elements.mobileFolders.forEach(folder => {
         observer.observe(folder, {
           attributes: true,
           attributeFilter: ['class']
@@ -736,16 +704,16 @@ window.Squarespace.initializePageContent(window.Y, window.Y.one(mobileMenuContai
       });
       
       // Store observer reference for cleanup
-      this.mobileFolderObserver = observer;
+      megaMenuInstance.mobileFolderObserver = observer;
     }
     
     /**
      * Handle mobile folder active state changes
      * @param {HTMLElement} folder - The folder that changed
      */
-    handleMobileFolderChange(folder) {
+    function handleMobileFolderChange(folder) {
       // Skip if showOnMobile is false
-      if (!this.elements.container.classList.contains('header--menu-open') || !this.config.showOnMobile || !this.elements.headerMenu) return;
+      if (!elements.container.classList.contains('header--menu-open') || !config.showOnMobile || !elements.headerMenu) return;
       
       const isActive = folder.classList.contains('header-menu-nav-folder--active');
       const megaPath = folder.getAttribute('data-folder');
@@ -757,15 +725,15 @@ window.Squarespace.initializePageContent(window.Y, window.Y.one(mobileMenuContai
           const theme = megaContent.getAttribute('data-section-theme');
           if (theme) {
             // Apply theme to header menu
-            this.elements.headerMenu.setAttribute('data-section-theme', theme);
-            this.elements.header.setAttribute('data-section-theme', theme);
+            elements.headerMenu.setAttribute('data-section-theme', theme);
+            elements.header.setAttribute('data-section-theme', theme);
           }
         }
       } else {
         // Restore original theme
-        if (this.state.headerMobileTheme) {
-          this.elements.headerMenu.setAttribute('data-section-theme', this.state.headerMobileTheme);
-          this.elements.header.setAttribute('data-section-theme', this.state.headerMobileTheme);
+        if (state.headerMobileTheme) {
+          elements.headerMenu.setAttribute('data-section-theme', state.headerMobileTheme);
+          elements.header.setAttribute('data-section-theme', state.headerMobileTheme);
         }
       }
     }
@@ -773,12 +741,12 @@ window.Squarespace.initializePageContent(window.Y, window.Y.one(mobileMenuContai
     /**
      * Handle window resize event
      */
-    handleResize() {
+    function handleResize() {
       // Reset cached header height on resize
-      this.state.headerHeight = null;     
+      state.headerHeight = null;     
       // Update header height if a menu is open
-      if (this.state.activeMenuId) {
-        this.updateHeaderHeight();
+      if (state.activeMenuId) {
+        updateHeaderHeight();
       }
     }
     
@@ -786,13 +754,13 @@ window.Squarespace.initializePageContent(window.Y, window.Y.one(mobileMenuContai
      * Handle document keydown for Escape key
      * @param {KeyboardEvent} event - The keydown event
      */
-    handleKeyDown(event) {
-      if (event.key === 'Escape' && this.state.activeMenuId) {
-        const trigger = document.querySelector(`.mega-link[aria-controls="${this.state.activeMenuId}"]`);
-        const menu = document.getElementById(this.state.activeMenuId);
+    function handleKeyDown(event) {
+      if (event.key === 'Escape' && state.activeMenuId) {
+        const trigger = document.querySelector(`.mega-link[aria-controls="${state.activeMenuId}"]`);
+        const menu = document.getElementById(state.activeMenuId);
         
         if (trigger && menu) {
-          this.closeMenu(trigger, menu);
+          closeMenu(trigger, menu);
         }
       }
     }
@@ -801,12 +769,12 @@ window.Squarespace.initializePageContent(window.Y, window.Y.one(mobileMenuContai
      * Handle document click for closing on outside click
      * @param {MouseEvent} event - The click event
      */
-    handleDocumentClick(event) {
-      if (!this.state.activeMenuId) return;   
-      const menu = document.getElementById(this.state.activeMenuId);
-      const trigger = document.querySelector(`.mega-link[aria-controls="${this.state.activeMenuId}"]`);     
-      if (menu&&trigger&&!menu.contains(event.target)&&!trigger.contains(event.target)) {
-        this.closeMenu(trigger, menu, false);
+    function handleDocumentClick(event) {
+      if (!state.activeMenuId) return;   
+      const menu = document.getElementById(state.activeMenuId);
+      const trigger = document.querySelector(`.mega-link[aria-controls="${state.activeMenuId}"]`);     
+      if (menu && trigger && !menu.contains(event.target) && !trigger.contains(event.target)) {
+        closeMenu(trigger, menu, false);
       }
     }
     
@@ -814,105 +782,128 @@ window.Squarespace.initializePageContent(window.Y, window.Y.one(mobileMenuContai
      * Handle scroll event for closing menu on scroll
      * Always enabled now
      */
-      handleScroll() {
-      if (!this.state.activeMenuId) return;    
-      const menu = document.getElementById(this.state.activeMenuId);
+    function handleScroll() {
+      if (!state.activeMenuId) return;    
+      const menu = document.getElementById(state.activeMenuId);
       if (!menu) return;
       const section = menu.querySelector('.page-section');
       if (section) {
-        const trigger = document.querySelector(`.mega-link[aria-controls="${this.state.activeMenuId}"]`);
+        const trigger = document.querySelector(`.mega-link[aria-controls="${state.activeMenuId}"]`);
         if (trigger) {
-          this.closeMenu(trigger, menu, false);
+          closeMenu(trigger, menu, false);
         }
       }
     }
     
-   /**
-    * Clean up and destroy the mega menu instance
-    */
-   destroy() {
-     // Clean up all timeouts
-     this.timeouts.forEach(clearTimeout);
-     this.timeouts = [];
-     
-     // Clean up global event listeners
-     window.removeEventListener('resize', this.handlers.resize);
-     document.removeEventListener('keydown', this.handlers.keydown);
-     document.removeEventListener('click', this.handlers.click);
-     
-     // Always remove scroll event listener if menu is active
-     if (this.state.activeMenuId) {
-       window.removeEventListener('scroll', this.handlers.scroll);
-     }
-     
-     // Clean up all menu-related event listeners
-     this.elements.menuLinks.forEach(trigger => {
-       const menuId = trigger.getAttribute('aria-controls');
-       if (!menuId) return;
-       
-       const menu = document.getElementById(menuId);
-       if (!menu) return;
-       
-       // Clean up trigger event listeners
-       const triggerClone = trigger.cloneNode(true);
-       trigger.parentNode.replaceChild(triggerClone, trigger);
-       
-       // Clean up menu event listeners
-       const menuClone = menu.cloneNode(true);
-       if (menu.parentNode) {
-         menu.parentNode.replaceChild(menuClone, menu);
-       }
-     });
-     
-     // Clean up mobile menu content if showOnMobile is true
-     if (this.config.showOnMobile && this.elements.mobileFolders && this.elements.mobileFolders.length) {
-       this.elements.mobileFolders.forEach(folder => {
-         // Find and remove all mobile mega content elements
-         const mobileContents = folder.querySelectorAll('.mobile-mega-content');
-         mobileContents.forEach(content => {
-           content.remove();
-         });
-       });
-     }
-     
-     // Disconnect mobile folder observer if showOnMobile is true
-     if (this.config.showOnMobile && this.mobileFolderObserver) {
-       this.mobileFolderObserver.disconnect();
-       this.mobileFolderObserver = null;
-     }
-     
-     // Stop observing DOM changes
-     if (this.editModeObserver) {
-       this.editModeObserver.disconnect();
-       this.editModeObserver = null;
-     }
-     
-     // Remove mega container from DOM
-     if (this.elements.megaContainer) {
-       this.elements.megaContainer.remove();
-     }
-     
-     // Restore original header theme if needed
-     if (this.elements.header && this.state.headerTheme) {
-       this.elements.header.setAttribute('data-section-theme', this.state.headerTheme);
-     }
-     
-     // Restore original mobile menu theme if needed (only if showOnMobile is true)
-     if (this.config.showOnMobile && this.elements.headerMenu && this.state.headerMobileTheme) {
-       this.elements.headerMenu.setAttribute('data-section-theme', this.state.headerMobileTheme);
-     }
-     
-     // Remove from instance tracking
-     if (window.megaMenuInstances) {
-       window.megaMenuInstances.delete(this);
-     }
-     
-     // Clear references to allow garbage collection
-     this.handlers = null;
-     this.elements = null;
-     this.config = null;
-     this.state.initialized = false;
-   }
+    /**
+     * Clean up and destroy the mega menu instance
+     */
+    function destroy() {
+      // Clean up all timeouts
+      timeouts.forEach(clearTimeout);
+      timeouts.length = 0;
+      
+      // Clean up global event listeners
+      window.removeEventListener('resize', handleResize);
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('click', handleDocumentClick);
+      
+      // Always remove scroll event listener if menu is active
+      if (state.activeMenuId) {
+        window.removeEventListener('scroll', handleScroll);
+      }
+      
+      // Clean up all menu-related event listeners
+      elements.menuLinks.forEach(trigger => {
+        const menuId = trigger.getAttribute('aria-controls');
+        if (!menuId) return;
+        
+        const menu = document.getElementById(menuId);
+        if (!menu) return;
+        
+        // Clean up trigger event listeners
+        const triggerClone = trigger.cloneNode(true);
+        trigger.parentNode.replaceChild(triggerClone, trigger);
+        
+        // Clean up menu event listeners
+        const menuClone = menu.cloneNode(true);
+        if (menu.parentNode) {
+          menu.parentNode.replaceChild(menuClone, menu);
+        }
+      });
+      
+      // Clean up mobile menu content if showOnMobile is true
+      if (config.showOnMobile && elements.mobileFolders && elements.mobileFolders.length) {
+        elements.mobileFolders.forEach(folder => {
+          // Find and remove all mobile mega content elements
+          const mobileContents = folder.querySelectorAll('.mobile-mega-content');
+          mobileContents.forEach(content => {
+            content.remove();
+          });
+        });
+      }
+      
+      // Disconnect mobile folder observer if showOnMobile is true
+      if (config.showOnMobile && megaMenuInstance.mobileFolderObserver) {
+        megaMenuInstance.mobileFolderObserver.disconnect();
+        megaMenuInstance.mobileFolderObserver = null;
+      }
+      
+      // Stop observing DOM changes
+      if (megaMenuInstance.editModeObserver) {
+        megaMenuInstance.editModeObserver.disconnect();
+        megaMenuInstance.editModeObserver = null;
+      }
+      
+      // Remove mega container from DOM
+      if (elements.megaContainer) {
+        elements.megaContainer.remove();
+      }
+      
+      // Restore original header theme if needed
+      if (elements.header && state.headerTheme) {
+        elements.header.setAttribute('data-section-theme', state.headerTheme);
+      }
+      
+      // Restore original mobile menu theme if needed (only if showOnMobile is true)
+      if (config.showOnMobile && elements.headerMenu && state.headerMobileTheme) {
+        elements.headerMenu.setAttribute('data-section-theme', state.headerMobileTheme);
+      }
+      
+      // Remove from instance tracking
+      if (window.megaMenuInstances) {
+        window.megaMenuInstances.delete(megaMenuInstance);
+      }
+      
+      // Clear references to allow garbage collection
+      state.initialized = false;
+    }
+    
+    // Create the instance object
+    const megaMenuInstance = {
+      config,
+      state,
+      elements,
+      destroy,
+      editModeObserver: null,
+      mobileFolderObserver: null
+    };
+    
+    // Add to instance tracking for proper cleanup
+    if (!window.megaMenuInstances) {
+      window.megaMenuInstances = new Set();
+    }
+    window.megaMenuInstances.add(megaMenuInstance);
+    
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+    
+    // Return the instance for external access if needed
+    return megaMenuInstance;
   }
   
   // Expose to global scope
