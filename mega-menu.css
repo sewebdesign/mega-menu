@@ -113,7 +113,7 @@ body:is(.sqs-edit-mode-active,.sqs-site-styles-active) #mega-container {
     transition: background-color 140ms ease-in-out 0ms, transform 140ms ease-in-out;
 }
 
-.cse-adaptive-theme #header:has(.mega-link[aria-expanded="true"]):not(.shrink,[data-section-theme=""]) {
+.cse-adaptive-theme #header:has(.mega-link[aria-expanded="true"]):not(.shrink,.cse-transparent) {
   background-color: var(--siteBackgroundColor)!important;
 }
 
