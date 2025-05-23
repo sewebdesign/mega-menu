@@ -141,6 +141,9 @@ body:is(.sqs-edit-mode-active,.sqs-site-styles-active) #mega-container {
 #header [data-folder]:has(.mobile-mega-content) :not(.has-background) :is(.section-border, .section-background) {
     background-color: transparent;
 }
+.header-menu-bg {
+    transition: background-color 600ms cubic-bezier(.4,0,.2,1);
+}
 
 /* Inset Style */
 .cse-mega-inset #mega-container:not(.mega-inset-click) .mega-menu-item .page-section, #mega-container.mega-inset-click .mega-menu-item {
