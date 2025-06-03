@@ -164,7 +164,6 @@ body:is(.sqs-edit-mode-active,.sqs-site-styles-active) #mega-container {
   width: calc(100% - (var(--sqs-site-gutter) * 2));
   left: 50%;
   translate: -50% 0;
-  margin-top: var(--csemegaheaderheight)!important;
 }
 .cse-mega-inset .mega-menu-item .page-section:first-child {
   padding-top: 0!important;
