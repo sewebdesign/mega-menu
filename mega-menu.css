@@ -161,9 +161,9 @@ body:is(.sqs-edit-mode-active,.sqs-site-styles-active) #mega-container {
 /* Inset Style */
 .cse-mega-inset #mega-container:not(.mega-inset-click) .mega-menu-item .page-section, #mega-container.mega-inset-click .mega-menu-item {
   max-width: var(--megamaxwidth);
-  width: calc(~"100% - (var(--sqs-site-gutter) * 2)");
- left: 50%;
- translate: -50% 0;
+  width: calc(100% - (var(--sqs-site-gutter) * 2));
+  left: 50%;
+  translate: -50% 0;
   margin-top: var(--csemegaheaderheight)!important;
 }
 .cse-mega-inset .mega-menu-item .page-section:first-child {
