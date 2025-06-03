@@ -138,6 +138,19 @@ body:is(.sqs-edit-mode-active,.sqs-site-styles-active) #mega-container {
   margin-inline: 0;
 }
 
+/* Menu Nav Color Theme */
+#header .header-menu:has(.header-menu-nav-folder--active:not([data-folder="root"])) .header-menu-bg {
+    background-color: var(--siteBackgroundColor);
+}
+
+#header .header-menu .header-menu-nav a:not(.btn) {
+    color: var(--paragraphLinkColor);
+}
+
+#header .header-menu .header-menu-nav :is(h1,h2,h3,h4) a:not(.btn) {
+    color: var(--headingLinkColor);
+}
+
 #header [data-folder]:has(.mobile-mega-content) :not(.has-background) :is(.section-border, .section-background) {
     background-color: transparent;
 }
