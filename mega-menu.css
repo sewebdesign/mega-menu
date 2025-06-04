@@ -168,6 +168,3 @@ body:is(.sqs-edit-mode-active,.sqs-site-styles-active) #mega-container {
 .cse-mega-inset .mega-menu-item .page-section:first-child {
   padding-top: 0!important;
 }
-.cse-mega-inset #header[data-header-style="dynamic"]:has(.mega-link[aria-expanded="true"]) {
-    background-color: var(--siteBackgroundColor)!important;
-}
