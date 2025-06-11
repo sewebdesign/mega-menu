@@ -483,8 +483,13 @@
         });
       });
       
-      // Observe all mobile folders
-      const mobileFolders = Array.from(dom.headerMenu.querySelectorAll('.header-menu-nav-folder[data-folder^="/mega-"]'));
+      // Create a selector that includes both mega folders and member folders
+      const selectors = [
+        '.header-menu-nav-folder[data-folder^="/mega-"]',
+        ...config.memberLinks.map(link => `.header-menu-nav-folder[data-folder="${link}"]`)
+      ];
+      
+      const mobileFolders = Array.from(dom.headerMenu.querySelectorAll(selectors.join(', ')));
       mobileFolders.forEach(folder => {
         observer.observe(folder, { attributes: true, attributeFilter: ['class'] });
       });
@@ -496,9 +501,13 @@
       if (!dom.container.classList.contains('header--menu-open') || !config.showOnMobile || !dom.headerMenu) return;
       
       const isActive = folder.classList.contains('header-menu-nav-folder--active');
-      const megaPath = folder.getAttribute('data-folder');
+      const folderPath = folder.getAttribute('data-folder');
       
-      if (isActive && megaPath) {
+      // Check if this is a mega folder or member folder
+      const isMegaFolder = folderPath?.startsWith('/mega-');
+      const isMemberFolder = config.memberLinks.includes(folderPath);
+      
+      if (isActive && (isMegaFolder || isMemberFolder)) {
         const megaContent = folder.querySelector('.mobile-mega-content');
         if (megaContent) {
           const theme = megaContent.getAttribute('data-section-theme');
@@ -523,10 +532,26 @@
     function loadMobileContent() {
       // Load mobile content with theme support
       utils.requestTask(() => {
-        const mobileFolders = Array.from(dom.headerMenu.querySelectorAll('.header-menu-nav-folder[data-folder^="/mega-"]'));
+        // Create selectors for both mega folders and member folders
+        const selectors = [
+          '.header-menu-nav-folder[data-folder^="/mega-"]',
+          ...config.memberLinks.map(link => `.header-menu-nav-folder[data-folder="${link}"]`)
+        ];
+        
+        const mobileFolders = Array.from(dom.headerMenu.querySelectorAll(selectors.join(', ')));
         
         mobileFolders.forEach(folder => {
-          const megaPath = folder.getAttribute('data-folder').slice(1);
+          const folderPath = folder.getAttribute('data-folder');
+          const isMemberFolder = config.memberLinks.includes(folderPath);
+          
+          // Determine the mega path
+          let megaPath;
+          if (isMemberFolder) {
+            megaPath = 'mega-' + folderPath;
+          } else {
+            megaPath = folderPath.slice(1); // Remove leading slash
+          }
+          
           const desktopMenu = document.getElementById(megaPath);
           
           if (desktopMenu && !folder.querySelector('.mobile-mega-content')) {
