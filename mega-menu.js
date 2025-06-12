@@ -346,8 +346,7 @@
         if (config.adaptiveHeaderTheme?.toLowerCase() === 'transparent') {
           dom.header.classList.add('cse-transparent');
         } else if (config.adaptiveHeaderTheme) {
-          if (dom.header.getAttribute('data-header-style') === 'dynamic' && 
-              !dom.header.classList.contains('shrink')) {
+          if (dom.header.getAttribute('data-header-style') === 'dynamic') {
             dom.header.setAttribute('data-section-theme', config.adaptiveHeaderTheme);
           }
         } else if (dom.header.getAttribute('data-header-style') === 'dynamic') {
