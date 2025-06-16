@@ -451,7 +451,7 @@
      * Mobile menu handling with theme support
      */
     function setupMobileMenu() {
-      if (!config.showOnMobile || !dom.headerMenu) return;
+      if (!config.showOnMobile || config.showOnMobile === 'false' || !dom.headerMenu) return;
       
       const observer = new MutationObserver((mutations) => {
         mutations.forEach(mutation => {
@@ -470,7 +470,7 @@
     }
     
     function setupMobileFolderObserver() {
-      if (!config.showOnMobile || !dom.headerMenu) return;
+      if (!config.showOnMobile || config.showOnMobile === 'false' || !dom.headerMenu) return;
       
       const observer = new MutationObserver((mutations) => {
         mutations.forEach(mutation => {
@@ -497,7 +497,10 @@
     }
     
     function handleMobileFolderChange(folder) {
-      if (!dom.container.classList.contains('header--menu-open') || !config.showOnMobile || !dom.headerMenu) return;
+      if (!dom.container.classList.contains('header--menu-open') || 
+      !config.showOnMobile || 
+      config.showOnMobile === 'false' || 
+      !dom.headerMenu) return;
       
       const isActive = folder.classList.contains('header-menu-nav-folder--active');
       const folderPath = folder.getAttribute('data-folder');
