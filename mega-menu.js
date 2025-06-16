@@ -532,6 +532,8 @@
     }
     
     function loadMobileContent() {
+      if (!config.showOnMobile || config.showOnMobile === 'false') return;
+      
       // Load mobile content with theme support
       utils.requestTask(() => {
         // Create selectors for both mega folders and member folders
