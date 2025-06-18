@@ -32,12 +32,14 @@
       get header() { return this._header ??= document.querySelector('#header'); },
       get headerMenu() { return this._headerMenu ??= document.querySelector('#header .header-menu'); },
       get container() { return this._container ??= document.body; },
+      get siteWrapper() { return this._siteWrapper ??= document.querySelector('#siteWrapper'); },
       get megaContainer() { return this._megaContainer ??= this.createMegaContainer(); },
       
       createMegaContainer() {
         const container = document.createElement('div');
         container.id = 'mega-container';
-        document.body.appendChild(container);
+        const targetContainer = this.siteWrapper || document.body;
+        targetContainer.appendChild(container); 
         return container;
       }
     };
