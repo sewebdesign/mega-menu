@@ -1,4 +1,4 @@
-(function() {
+  (function() {
   'use strict';
 
   /**
@@ -24,7 +24,8 @@
       themes: { header: null, headerMobile: null },
       loadCache: new Map(), // Combined loading and loaded tracking
       isInIframe: window.self !== window.top,
-      isTouchDevice: 'ontouchstart' in window || navigator.maxTouchPoints > 0
+      isTouchDevice: 'ontouchstart' in window || navigator.maxTouchPoints > 0,
+      currentPath: window.location.pathname // Track current page path
     };
     
     // Cached DOM elements with lazy initialization
@@ -72,7 +73,30 @@
       findFocusable: (container) => Array.from(container.querySelectorAll(
         'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), ' + 
         'textarea:not([disabled]), [tabindex]:not([tabindex="-1"]), [contenteditable], [role="button"]'
-      ))
+      )),
+
+      // New utility function to check if a link is the current page
+      isCurrentPage: (href) => {
+        if (!href) return false;
+        
+        // Handle different URL formats
+        let linkPath = href;
+        
+        // If it's a full URL, extract the pathname
+        if (href.startsWith('http')) {
+          try {
+            linkPath = new URL(href).pathname;
+          } catch (e) {
+            return false;
+          }
+        }
+        
+        // Normalize paths (remove trailing slashes for comparison)
+        const currentPath = state.currentPath.replace(/\/$/, '') || '/';
+        const comparePath = linkPath.replace(/\/$/, '') || '/';
+        
+        return currentPath === comparePath;
+      }
     };
     
     /**
@@ -158,6 +182,9 @@
             container.appendChild(content.section);
             if (content.theme) container.setAttribute('data-section-theme', content.theme);
             
+            // Mark active links in the mega menu content
+            markActiveLinks(container);
+            
             container.classList.add('mega-menu-loaded');
             setupMenuTrigger(trigger, linkPath);
             
@@ -168,6 +195,20 @@
       } catch (error) {
         console.error(`Failed to process menu ${linkPath}:`, error);
       }
+    }
+    
+    /**
+     * Mark active links in mega menu content
+     */
+    function markActiveLinks(container) {
+      const links = container.querySelectorAll('a[href]');
+      
+      links.forEach(link => {
+        const href = link.getAttribute('href');
+        if (utils.isCurrentPage(href)) {
+          link.classList.add('header-nav-item--active');
+        }
+      });
     }
     
     /**
@@ -579,6 +620,9 @@
             
             // Add .btn class to button blocks
             mobileContent.querySelectorAll('.button-block a').forEach(btn => btn.classList.add('btn'));
+            
+            // Mark active links in mobile content too
+            markActiveLinks(mobileContent);
             
             folder.appendChild(mobileContent);
             initializeSquarespaceBlocks(mobileContent);
