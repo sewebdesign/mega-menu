@@ -1,4 +1,4 @@
-  (function() {
+(function() {
   'use strict';
 
   /**
@@ -98,6 +98,54 @@
         return currentPath === comparePath;
       }
     };
+      
+      
+      // Shape block resource cache
+const loadedResources = new Set();
+
+/**
+ * Process shape blocks in container
+ */
+function processShapeBlocks(container) {
+  const shapeBlocks = container.querySelectorAll('[data-definition-name="website.components.shape"]');
+  
+  shapeBlocks.forEach(block => {
+    // Load CSS resources
+    try {
+      const cssUrls = JSON.parse(block.getAttribute('data-block-css') || '[]');
+      cssUrls.forEach(url => {
+        if (!loadedResources.has(url)) {
+          const link = document.createElement('link');
+          link.rel = 'stylesheet';
+          link.href = url;
+          document.head.appendChild(link);
+          loadedResources.add(url);
+        }
+      });
+    } catch (e) {}
+    
+    // Load JS resources
+    try {
+      const jsUrls = JSON.parse(block.getAttribute('data-block-scripts') || '[]');
+      jsUrls.forEach(url => {
+        if (!loadedResources.has(url)) {
+          const script = document.createElement('script');
+          script.src = url;
+          document.head.appendChild(script);
+          loadedResources.add(url);
+        }
+      });
+    } catch (e) {}
+    
+    // Show the shape block
+    const shapeContainer = block.querySelector('.sqs-shape-block-container');
+    if (shapeContainer) {
+      shapeContainer.classList.remove('hidden-stretch-block');
+    }
+  });
+}
+      
+      
     
     /**
      * Enhanced content fetching with better caching
@@ -237,20 +285,23 @@
     }
     
     /**
-     * Initialize Squarespace blocks with error handling
-     */
-    function initializeSquarespaceBlocks(container) {
-      if (!window.Squarespace || !window.Y) return;
-      
-      utils.requestTask(() => {
-        try {
-          window.Squarespace.initializePageContent(window.Y, window.Y.one(container));
-          window.Squarespace.initializeNativeVideo?.(window.Y, window.Y.one(container));
-        } catch (error) {
-          console.warn('Squarespace initialization failed:', error);
-        }
-      }, { timeout: 2000 });
+ * Initialize Squarespace blocks with error handling and shape block support
+ */
+function initializeSquarespaceBlocks(container) {
+  if (!window.Squarespace || !window.Y) return;
+  
+  utils.requestTask(() => {
+    try {
+      window.Squarespace.initializePageContent(window.Y, window.Y.one(container));
+      window.Squarespace.initializeNativeVideo?.(window.Y, window.Y.one(container));
+    } catch (error) {
+      console.warn('Squarespace initialization failed:', error);
     }
+    
+    // Process shape blocks
+    processShapeBlocks(container);
+  }, { timeout: 2000 });
+}
     
     /**
      * Simplified menu trigger setup
