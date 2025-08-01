@@ -104,6 +104,11 @@ body:not(.sqs-edit-mode-active) #header:has(.mega-link[aria-expanded="true"]) .h
   object-fit: cover!important;
 }
 
+/* Product blocks should keep own img aspect ratio */
+[data-definition-name="website.components.product"] .image-container img {
+  position: relative!important;
+}
+
 body:is(.sqs-edit-mode-active,.sqs-site-styles-active) #mega-container {
   display: none!important;
 }
