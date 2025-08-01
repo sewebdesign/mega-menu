@@ -105,7 +105,7 @@ body:not(.sqs-edit-mode-active) #header:has(.mega-link[aria-expanded="true"]) .h
 }
 
 /* Product blocks should keep own img aspect ratio */
-[data-definition-name="website.components.product"] .image-container img {
+.mega-menu-item [data-definition-name="website.components.product"] .image-container img {
   position: relative!important;
 }
 
