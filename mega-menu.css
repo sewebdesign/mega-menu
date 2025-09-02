@@ -103,6 +103,9 @@ body:not(.sqs-edit-mode-active) #header:has(.mega-link[aria-expanded="true"]) .h
   left: 0!important;
   object-fit: cover!important;
 }
+.mega-menu-item .summary-thumbnail img {
+    position: relative!important;
+}
 
 /* Product blocks should keep own img aspect ratio */
 .mega-menu-item [data-definition-name="website.components.product"] .image-container img {
