@@ -103,7 +103,7 @@ body:not(.sqs-edit-mode-active) #header:has(.mega-link[aria-expanded="true"]) .h
   left: 0!important;
   object-fit: cover!important;
 }
-.mega-menu-item .summary-thumbnail img {
+.mega-menu-item .sqs-gallery-design-autocolumns .summary-item img {
     position: relative!important;
 }
 
