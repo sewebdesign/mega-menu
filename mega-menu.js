@@ -96,54 +96,59 @@
         const comparePath = linkPath.replace(/\/$/, '') || '/';
         
         return currentPath === comparePath;
+      },
+      
+      // Helper to get href value from either href or data-href attribute
+      getHrefValue: (element) => {
+        return element.getAttribute('href') || element.getAttribute('data-href');
       }
     };
       
       
-      // Shape block resource cache
-const loadedResources = new Set();
+    // Shape block resource cache
+    const loadedResources = new Set();
 
-/**
- * Process shape blocks in container
- */
-function processShapeBlocks(container) {
-  const shapeBlocks = container.querySelectorAll('[data-definition-name="website.components.shape"]');
-  
-  shapeBlocks.forEach(block => {
-    // Load CSS resources
-    try {
-      const cssUrls = JSON.parse(block.getAttribute('data-block-css') || '[]');
-      cssUrls.forEach(url => {
-        if (!loadedResources.has(url)) {
-          const link = document.createElement('link');
-          link.rel = 'stylesheet';
-          link.href = url;
-          document.head.appendChild(link);
-          loadedResources.add(url);
+    /**
+     * Process shape blocks in container
+     */
+    function processShapeBlocks(container) {
+      const shapeBlocks = container.querySelectorAll('[data-definition-name="website.components.shape"]');
+      
+      shapeBlocks.forEach(block => {
+        // Load CSS resources
+        try {
+          const cssUrls = JSON.parse(block.getAttribute('data-block-css') || '[]');
+          cssUrls.forEach(url => {
+            if (!loadedResources.has(url)) {
+              const link = document.createElement('link');
+              link.rel = 'stylesheet';
+              link.href = url;
+              document.head.appendChild(link);
+              loadedResources.add(url);
+            }
+          });
+        } catch (e) {}
+        
+        // Load JS resources
+        try {
+          const jsUrls = JSON.parse(block.getAttribute('data-block-scripts') || '[]');
+          jsUrls.forEach(url => {
+            if (!loadedResources.has(url)) {
+              const script = document.createElement('script');
+              script.src = url;
+              document.head.appendChild(script);
+              loadedResources.add(url);
+            }
+          });
+        } catch (e) {}
+        
+        // Show the shape block
+        const shapeContainer = block.querySelector('.sqs-shape-block-container');
+        if (shapeContainer) {
+          shapeContainer.classList.remove('hidden-stretch-block');
         }
       });
-    } catch (e) {}
-    
-    // Load JS resources
-    try {
-      const jsUrls = JSON.parse(block.getAttribute('data-block-scripts') || '[]');
-      jsUrls.forEach(url => {
-        if (!loadedResources.has(url)) {
-          const script = document.createElement('script');
-          script.src = url;
-          document.head.appendChild(script);
-          loadedResources.add(url);
-        }
-      });
-    } catch (e) {}
-    
-    // Show the shape block
-    const shapeContainer = block.querySelector('.sqs-shape-block-container');
-    if (shapeContainer) {
-      shapeContainer.classList.remove('hidden-stretch-block');
     }
-  });
-}
       
       
     
@@ -172,15 +177,18 @@ function processShapeBlocks(container) {
      * Early prefetch optimization
      */
     function prefetchContent() {
-      const links = document.querySelectorAll('.header-display-desktop .header-nav-folder-title[href^="/mega-"]');
-      const memberLinks = config.memberLinks.map(id => 
-        document.querySelector(`.header-display-desktop .header-nav-folder-title[href="${id}"]`)
-      ).filter(Boolean);
+      // Updated selector to work with both href and data-href
+      const links = document.querySelectorAll('.header-display-desktop .header-nav-folder-title[href^="/mega-"], .header-display-desktop .header-nav-folder-title[data-href^="/mega-"]');
+      
+      const memberLinks = config.memberLinks.map(id => {
+        // Try with both href and data-href attributes
+        return document.querySelector(`.header-display-desktop .header-nav-folder-title[href="${id}"], .header-display-desktop .header-nav-folder-title[data-href="${id}"]`);
+      }).filter(Boolean);
       
       [...links, ...memberLinks].forEach(link => {
-        const linkPath = link.getAttribute('data-mega-path') || link.getAttribute('href').slice(1);
-        const isMember = config.memberLinks.includes(link.getAttribute('href'));
-        fetchMenuContent(linkPath, isMember ? link.getAttribute('href') : null);
+        const linkPath = link.getAttribute('data-mega-path') || utils.getHrefValue(link).slice(1);
+        const isMember = config.memberLinks.includes(utils.getHrefValue(link));
+        fetchMenuContent(linkPath, isMember ? utils.getHrefValue(link) : null);
       });
     }
     
@@ -188,9 +196,11 @@ function processShapeBlocks(container) {
      * Process menu links with improved efficiency
      */
     function processMenuLinks() {
-      const megaLinks = Array.from(document.querySelectorAll('.header-display-desktop .header-nav-folder-title[href^="/mega-"]'));
+      // Updated selector to work with both href and data-href
+      const megaLinks = Array.from(document.querySelectorAll('.header-display-desktop .header-nav-folder-title[href^="/mega-"], .header-display-desktop .header-nav-folder-title[data-href^="/mega-"]'));
+      
       const memberLinks = config.memberLinks.map(id => {
-        const link = document.querySelector(`.header-display-desktop .header-nav-folder-title[href="${id}"]`);
+        const link = document.querySelector(`.header-display-desktop .header-nav-folder-title[href="${id}"], .header-display-desktop .header-nav-folder-title[data-href="${id}"]`);
         if (link) {
           link.setAttribute('data-mega-path', '/mega-' + id);
           link.classList.add('member-link');
@@ -199,7 +209,10 @@ function processShapeBlocks(container) {
       }).filter(Boolean);
       
       // Set paths for standard links
-      megaLinks.forEach(link => link.setAttribute('data-mega-path', link.getAttribute('href')));
+      megaLinks.forEach(link => {
+        // Use the href or data-href value
+        link.setAttribute('data-mega-path', utils.getHrefValue(link));
+      });
       
       const allLinks = [...megaLinks, ...memberLinks];
       
@@ -219,7 +232,7 @@ function processShapeBlocks(container) {
       const isMember = trigger.classList.contains('member-link');
       
       try {
-        const result = await fetchMenuContent(linkPath, isMember ? trigger.getAttribute('href') : null);
+        const result = await fetchMenuContent(linkPath, isMember ? utils.getHrefValue(trigger) : null);
         if (!result) return;
         
         utils.requestTask(() => {
@@ -285,29 +298,30 @@ function processShapeBlocks(container) {
     }
     
     /**
- * Initialize Squarespace blocks with error handling and shape block support
- */
-function initializeSquarespaceBlocks(container) {
-  if (!window.Squarespace || !window.Y) return;
-  
-  utils.requestTask(() => {
-    try {
-      window.Squarespace.initializePageContent(window.Y, window.Y.one(container));
-      window.Squarespace.initializeNativeVideo?.(window.Y, window.Y.one(container));
-    } catch (error) {
-      console.warn('Squarespace initialization failed:', error);
+     * Initialize Squarespace blocks with error handling and shape block support
+     */
+    function initializeSquarespaceBlocks(container) {
+      if (!window.Squarespace || !window.Y) return;
+      
+      utils.requestTask(() => {
+        try {
+          window.Squarespace.initializePageContent(window.Y, window.Y.one(container));
+          window.Squarespace.initializeNativeVideo?.(window.Y, window.Y.one(container));
+        } catch (error) {
+          console.warn('Squarespace initialization failed:', error);
+        }
+        
+        // Process shape blocks
+        processShapeBlocks(container);
+      }, { timeout: 2000 });
     }
-    
-    // Process shape blocks
-    processShapeBlocks(container);
-  }, { timeout: 2000 });
-}
     
     /**
      * Simplified menu trigger setup
      */
     function setupMenuTrigger(trigger, menuId) {
-      const menu = document.getElementById(menuId);
+      // Specifically look for the menu inside the mega-container to avoid ID conflicts
+      const menu = dom.megaContainer.querySelector(`#${menuId}`);
       if (!menu) return;
       
       // Set accessibility attributes
@@ -348,8 +362,15 @@ function initializeSquarespaceBlocks(container) {
       if ((config.folderClickThrough === true || config.folderClickThrough === 'true') && 
           !(config.clickToShow === true || config.clickToShow === 'true') && 
           !trigger.classList.contains('member-link')) {
-        trigger.addEventListener('click', function() {
-          window.location.href = '/' + this.getAttribute('href').slice(6);
+        trigger.addEventListener('click', function(e) {
+          const hrefValue = utils.getHrefValue(this);
+          if (hrefValue) {
+            // Prevent default only for <a> elements
+            if (this.tagName.toLowerCase() === 'a') {
+              e.preventDefault();
+            }
+            window.location.href = '/' + hrefValue.slice(6);
+          }
         });
       }
     }
@@ -369,7 +390,7 @@ function initializeSquarespaceBlocks(container) {
       if (state.activeMenuId && state.activeMenuId !== menu.id) {
         const current = {
           trigger: document.querySelector(`.mega-link[aria-controls="${state.activeMenuId}"]`),
-          menu: document.getElementById(state.activeMenuId)
+          menu: dom.megaContainer.querySelector(`#${state.activeMenuId}`)
         };
         if (current.trigger && current.menu) {
           closeMenu(current.trigger, current.menu, false);
@@ -514,7 +535,7 @@ function initializeSquarespaceBlocks(container) {
     function handleKeyDown(e) {
       if (e.key === 'Escape' && state.activeMenuId) {
         const trigger = document.querySelector(`.mega-link[aria-controls="${state.activeMenuId}"]`);
-        const menu = document.getElementById(state.activeMenuId);
+        const menu = dom.megaContainer.querySelector(`#${state.activeMenuId}`);
         if (trigger && menu) closeMenu(trigger, menu);
       }
     }
@@ -522,7 +543,7 @@ function initializeSquarespaceBlocks(container) {
     function handleDocumentClick(e) {
       if (!state.activeMenuId) return;
       
-      const menu = document.getElementById(state.activeMenuId);
+      const menu = dom.megaContainer.querySelector(`#${state.activeMenuId}`);
       const trigger = document.querySelector(`.mega-link[aria-controls="${state.activeMenuId}"]`);
       
       if (menu && trigger && !menu.contains(e.target) && !trigger.contains(e.target)) {
@@ -533,7 +554,7 @@ function initializeSquarespaceBlocks(container) {
     function handleScroll() {
       if (!state.activeMenuId) return;
       
-      const menu = document.getElementById(state.activeMenuId);
+      const menu = dom.megaContainer.querySelector(`#${state.activeMenuId}`);
       const trigger = document.querySelector(`.mega-link[aria-controls="${state.activeMenuId}"]`);
       
       if (menu?.querySelector('.page-section') && trigger) {
@@ -650,7 +671,7 @@ function initializeSquarespaceBlocks(container) {
             megaPath = folderPath.slice(1); // Remove leading slash
           }
           
-          const desktopMenu = document.getElementById(megaPath);
+          const desktopMenu = dom.megaContainer.querySelector(`#${megaPath}`);
           
           if (desktopMenu && !folder.querySelector('.mobile-mega-content')) {
             const mobileContent = document.createElement('div');
