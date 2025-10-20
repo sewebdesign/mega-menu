@@ -83,7 +83,7 @@ body:not(.sqs-edit-mode-active) #header:has(.mega-link[aria-expanded="true"]) .h
 }
 
 /* Hide Mega Dropdowns Until Content Loads  */
-.header-nav-folder-title[href^="/mega-"] + .header-nav-folder-content {
+.header-nav-folder-title:is([href^="/mega-"],[data-href^="/mega-"]) + .header-nav-folder-content {
   visibility: hidden;
 }
 .header-nav-list:has(.mega-link) .header-nav-folder-title[data-mega-path] + .header-nav-folder-content {
