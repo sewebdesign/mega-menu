@@ -58,7 +58,7 @@
 }
 
 #mega-container .mega-menu-item .content-wrapper {
-  padding-block: var(--megapadding);
+  padding-block: var(--megapadding)!important;
 }
 
 .mega-menu-item.active {
