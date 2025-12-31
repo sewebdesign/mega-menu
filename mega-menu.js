@@ -13,6 +13,7 @@
       menuWidth: 'full',
       memberLinks: [],
       adaptiveHeaderTheme: null,
+      reveal: 'fade',
       ...options
     };
     
@@ -98,57 +99,24 @@
         return currentPath === comparePath;
       },
       
-      // Helper to get href value from either href or data-href attribute
+      // Helper to get href value from data-href attribute
       getHrefValue: (element) => {
-        return element.getAttribute('href') || element.getAttribute('data-href');
+        return element.getAttribute('data-href');
+      },
+      
+      // Convert a path to a valid CSS ID (replace slashes with dashes and remove mega-)
+      pathToId: (path) => {
+        return path.replace(/^\//, '').replace(/\//g, '-').replace(/mega-/, '');
+      },
+      
+      // Escape special characters for use in CSS selectors
+      escapeSelector: (str) => {
+        return CSS.escape ? CSS.escape(str) : str.replace(/([^\w-])/g, '\\$1');
       }
     };
       
       
-    // Shape block resource cache
-    const loadedResources = new Set();
-
-    /**
-     * Process shape blocks in container
-     */
-    function processShapeBlocks(container) {
-      const shapeBlocks = container.querySelectorAll('[data-definition-name="website.components.shape"]');
-      
-      shapeBlocks.forEach(block => {
-        // Load CSS resources
-        try {
-          const cssUrls = JSON.parse(block.getAttribute('data-block-css') || '[]');
-          cssUrls.forEach(url => {
-            if (!loadedResources.has(url)) {
-              const link = document.createElement('link');
-              link.rel = 'stylesheet';
-              link.href = url;
-              document.head.appendChild(link);
-              loadedResources.add(url);
-            }
-          });
-        } catch (e) {}
-        
-        // Load JS resources
-        try {
-          const jsUrls = JSON.parse(block.getAttribute('data-block-scripts') || '[]');
-          jsUrls.forEach(url => {
-            if (!loadedResources.has(url)) {
-              const script = document.createElement('script');
-              script.src = url;
-              document.head.appendChild(script);
-              loadedResources.add(url);
-            }
-          });
-        } catch (e) {}
-        
-        // Show the shape block
-        const shapeContainer = block.querySelector('.sqs-shape-block-container');
-        if (shapeContainer) {
-          shapeContainer.classList.remove('hidden-stretch-block');
-        }
-      });
-    }
+  
       
       
     
@@ -160,7 +128,9 @@
         return state.loadCache.get(linkPath);
       }
       
-      const fetchUrl = `/mega-page-${customPath || linkPath.slice(5)}`;
+      // Build fetch URL by replacing "mega-" with "mega-page-" in the path
+      const fetchUrl = '/' + linkPath.replace(/mega-/, 'mega-page-');
+      
       const promise = fetch(fetchUrl, { priority: 'low' })
         .then(response => response.ok ? response.text() : Promise.reject(`HTTP ${response.status}`))
         .then(html => ({ linkPath, html, loaded: true }))
@@ -177,12 +147,12 @@
      * Early prefetch optimization
      */
     function prefetchContent() {
-      // Updated selector to work with both href and data-href
-      const links = document.querySelectorAll('.header-display-desktop .header-nav-folder-title[href^="/mega-"], .header-display-desktop .header-nav-folder-title[data-href^="/mega-"]');
+      // Select buttons with data-href containing /mega-
+      const links = Array.from(document.querySelectorAll('.header-display-desktop .header-nav-folder-title[data-href]'))
+        .filter(el => el.getAttribute('data-href')?.includes('/mega-'));
       
       const memberLinks = config.memberLinks.map(id => {
-        // Try with both href and data-href attributes
-        return document.querySelector(`.header-display-desktop .header-nav-folder-title[href="${id}"], .header-display-desktop .header-nav-folder-title[data-href="${id}"]`);
+        return document.querySelector(`.header-display-desktop .header-nav-folder-title[data-href="${id}"]`);
       }).filter(Boolean);
       
       [...links, ...memberLinks].forEach(link => {
@@ -196,11 +166,12 @@
      * Process menu links with improved efficiency
      */
     function processMenuLinks() {
-      // Updated selector to work with both href and data-href
-      const megaLinks = Array.from(document.querySelectorAll('.header-display-desktop .header-nav-folder-title[href^="/mega-"], .header-display-desktop .header-nav-folder-title[data-href^="/mega-"]'));
+      // Select buttons with data-href containing /mega-
+      const megaLinks = Array.from(document.querySelectorAll('.header-display-desktop .header-nav-folder-title[data-href]'))
+        .filter(el => el.getAttribute('data-href')?.includes('/mega-'));
       
       const memberLinks = config.memberLinks.map(id => {
-        const link = document.querySelector(`.header-display-desktop .header-nav-folder-title[href="${id}"], .header-display-desktop .header-nav-folder-title[data-href="${id}"]`);
+        const link = document.querySelector(`.header-display-desktop .header-nav-folder-title[data-href="${id}"]`);
         if (link) {
           link.setAttribute('data-mega-path', '/mega-' + id);
           link.classList.add('member-link');
@@ -210,7 +181,7 @@
       
       // Set paths for standard links
       megaLinks.forEach(link => {
-        // Use the href or data-href value
+        // Use the data-href value
         link.setAttribute('data-mega-path', utils.getHrefValue(link));
       });
       
@@ -229,6 +200,7 @@
      */
     async function processMenu(trigger) {
       const linkPath = trigger.getAttribute('data-mega-path').slice(1);
+      const menuId = utils.pathToId(linkPath);
       const isMember = trigger.classList.contains('member-link');
       
       try {
@@ -236,7 +208,7 @@
         if (!result) return;
         
         utils.requestTask(() => {
-          const container = createMenuContainer(linkPath);
+          const container = createMenuContainer(menuId);
           const content = parseMenuContent(result.html);
           
           if (content.section) {
@@ -247,7 +219,7 @@
             markActiveLinks(container);
             
             container.classList.add('mega-menu-loaded');
-            setupMenuTrigger(trigger, linkPath);
+            setupMenuTrigger(trigger, menuId);
             
             // Initialize Squarespace blocks
             initializeSquarespaceBlocks(container);
@@ -275,9 +247,9 @@
     /**
      * Create menu container
      */
-    function createMenuContainer(linkPath) {
+    function createMenuContainer(menuId) {
       const container = document.createElement('div');
-      container.id = linkPath;
+      container.id = menuId;
       container.className = 'mega-menu-item';
       dom.megaContainer.appendChild(container);
       return container;
@@ -300,21 +272,18 @@
     /**
      * Initialize Squarespace blocks with error handling and shape block support
      */
-    function initializeSquarespaceBlocks(container) {
-      if (!window.Squarespace || !window.Y) return;
-      
-      utils.requestTask(() => {
-        try {
-          window.Squarespace.initializePageContent(window.Y, window.Y.one(container));
-          window.Squarespace.initializeNativeVideo?.(window.Y, window.Y.one(container));
-        } catch (error) {
-          console.warn('Squarespace initialization failed:', error);
+    function initializeSquarespaceBlocks(container){
+    if(!window.Squarespace||!window.Y)return;
+    utils.requestTask(()=>{
+        try{
+            window.Squarespace.initializePageContent(window.Y,window.Y.one(container));
+            window.Squarespace.initializeNativeVideo?.(window.Y,window.Y.one(container));
+            window.Squarespace.initializeWebsiteComponent(window.Y.one(container));
+        }catch(error){
+            console.warn('Squarespace initialization failed:',error);
         }
-        
-        // Process shape blocks
-        processShapeBlocks(container);
-      }, { timeout: 2000 });
-    }
+    },{timeout:2000});
+}
     
     /**
      * Simplified menu trigger setup
@@ -365,11 +334,9 @@
         trigger.addEventListener('click', function(e) {
           const hrefValue = utils.getHrefValue(this);
           if (hrefValue) {
-            // Prevent default only for <a> elements
-            if (this.tagName.toLowerCase() === 'a') {
-              e.preventDefault();
-            }
-            window.location.href = '/' + hrefValue.slice(6);
+            // Remove mega- from the path for navigation
+            const targetPath = hrefValue.replace(/mega-/, '');
+            window.location.href = targetPath;
           }
         });
       }
@@ -597,13 +564,13 @@
         });
       });
       
-      // Create a selector that includes both mega folders and member folders
-      const selectors = [
-        '.header-menu-nav-folder[data-folder^="/mega-"]',
-        ...config.memberLinks.map(link => `.header-menu-nav-folder[data-folder="${link}"]`)
-      ];
+      // Create a selector that includes both mega folders (containing /mega-) and member folders
+      const mobileFolders = Array.from(dom.headerMenu.querySelectorAll('.header-menu-nav-folder[data-folder]'))
+        .filter(folder => {
+          const dataFolder = folder.getAttribute('data-folder');
+          return dataFolder?.includes('/mega-') || config.memberLinks.includes(dataFolder);
+        });
       
-      const mobileFolders = Array.from(dom.headerMenu.querySelectorAll(selectors.join(', ')));
       mobileFolders.forEach(folder => {
         observer.observe(folder, { attributes: true, attributeFilter: ['class'] });
       });
@@ -620,8 +587,8 @@
       const isActive = folder.classList.contains('header-menu-nav-folder--active');
       const folderPath = folder.getAttribute('data-folder');
       
-      // Check if this is a mega folder or member folder
-      const isMegaFolder = folderPath?.startsWith('/mega-');
+      // Check if this is a mega folder (contains /mega-) or member folder
+      const isMegaFolder = folderPath?.includes('/mega-');
       const isMemberFolder = config.memberLinks.includes(folderPath);
       
       if (isActive && (isMegaFolder || isMemberFolder)) {
@@ -651,13 +618,12 @@
       
       // Load mobile content with theme support
       utils.requestTask(() => {
-        // Create selectors for both mega folders and member folders
-        const selectors = [
-          '.header-menu-nav-folder[data-folder^="/mega-"]',
-          ...config.memberLinks.map(link => `.header-menu-nav-folder[data-folder="${link}"]`)
-        ];
-        
-        const mobileFolders = Array.from(dom.headerMenu.querySelectorAll(selectors.join(', ')));
+        // Get folders that contain /mega- or are member folders
+        const mobileFolders = Array.from(dom.headerMenu.querySelectorAll('.header-menu-nav-folder[data-folder]'))
+          .filter(folder => {
+            const dataFolder = folder.getAttribute('data-folder');
+            return dataFolder?.includes('/mega-') || config.memberLinks.includes(dataFolder);
+          });
         
         mobileFolders.forEach(folder => {
           const folderPath = folder.getAttribute('data-folder');
@@ -671,7 +637,9 @@
             megaPath = folderPath.slice(1); // Remove leading slash
           }
           
-          const desktopMenu = dom.megaContainer.querySelector(`#${megaPath}`);
+          // Convert to valid ID for selector
+          const menuId = utils.pathToId(megaPath);
+          const desktopMenu = dom.megaContainer.querySelector(`#${utils.escapeSelector(menuId)}`);
           
           if (desktopMenu && !folder.querySelector('.mobile-mega-content')) {
             const mobileContent = document.createElement('div');
@@ -738,6 +706,11 @@
         dom.container.classList.add('cse-adaptive-theme');
       }
       
+      // Apply reveal configuration
+      if (config.reveal === 'slide') {
+        dom.container.classList.add('cse-mega-slide');
+      }
+      
       // Process menus
       processMenuLinks();
       
@@ -791,7 +764,7 @@
       }
       
       // Remove classes
-      dom.container.classList.remove('cse-mega-inset', 'cse-adaptive-theme');
+      dom.container.classList.remove('cse-mega-inset', 'cse-adaptive-theme', 'cse-mega-slide');
       
       // Clear state
       state.initialized = false;
