@@ -83,7 +83,7 @@ body:not(.sqs-edit-mode-active) #header:has(.mega-link[aria-expanded="true"]) .h
 }
 
 /* Hide Mega Dropdowns Until Content Loads  */
-.header-nav-folder-title:is([href^="/mega-"],[data-href^="/mega-"]) + .header-nav-folder-content {
+.header-nav-folder-title[data-href*="/mega-"] + .header-nav-folder-content {
   visibility: hidden;
 }
 .header-nav-list:has(.mega-link) .header-nav-folder-title[data-mega-path] + .header-nav-folder-content {
@@ -106,7 +106,7 @@ body:not(.sqs-edit-mode-active) #header:has(.mega-link[aria-expanded="true"]) .h
 .mega-menu-item .sqs-gallery-design-autocolumns .summary-item img, .mega-menu-item .sqs-gallery-block-grid .slide a {
     position: relative!important;
 }
-
+  
 /* Product blocks should keep own img aspect ratio */
 .mega-menu-item [data-definition-name="website.components.product"] .image-container img {
   position: relative!important;
@@ -176,4 +176,25 @@ body:is(.sqs-edit-mode-active,.sqs-site-styles-active) #mega-container {
   width: calc(100% - (var(--sqs-site-gutter) * 2));
   left: 50%;
   translate: -50% 0;
+}
+  
+/* Slide Style */
+.cse-mega-slide .mega-menu-item { 
+  opacity: 1;
+  transform: translateY(0%);
+  clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
+  transition: visibility 0s linear .8s, clip-path .8s ease;
+}
+  
+.cse-mega-slide .mega-menu-item.active {
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0% 100%);
+  z-index: 2;
+}
+.cse-mega-slide .mega-menu-item .content {
+  transform: translateY(-10%);
+  transition: transform .8s ease;
+}
+
+.cse-mega-slide .mega-menu-item.active .content {
+  transform: translateY(0%); 
 }
