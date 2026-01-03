@@ -106,8 +106,9 @@
       
       // Convert a path to a valid CSS ID (replace slashes with dashes and remove mega-)
       pathToId: (path) => {
-        return path.replace(/^\//, '').replace(/\//g, '-').replace(/mega-/, '');
-      },
+        const cleanPath = path.replace(/^\//, '').replace(/\//g, '-').replace(/^mega-/, '');
+        return 'mega-' + cleanPath;
+      }
       
       // Escape special characters for use in CSS selectors
       escapeSelector: (str) => {
