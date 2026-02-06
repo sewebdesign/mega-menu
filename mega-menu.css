@@ -184,22 +184,23 @@ body:is(.sqs-edit-mode-active,.sqs-site-styles-active) #mega-container {
   
 /* Slide Style */
 .cse-mega-slide #mega-container .mega-menu-item {
-  opacity: 1;
-  visibility: hidden;
-  transform: translateY(0);
   clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
-  transition: visibility 0s linear .8s, clip-path .8s ease;
+  overflow: hidden;
+  transition: visibility 0s linear .8s, clip-path .8s ease, transform 0s linear .8s, opacity 0s linear .8s;
 }
-.cse-mega-slide #mega-container .mega-menu-item .content {
-  opacity: 0;
-  transform: translateY(-50px);
-  transition: opacity .8s ease, transform .8s ease;
-}
+
 .cse-mega-slide #mega-container .mega-menu-item.active {
   visibility: visible;
   clip-path: polygon(0 0, 100% 0, 100% 100%, 0% 100%);
   z-index: 2;
 }
+
+.cse-mega-slide #mega-container .mega-menu-item .content {
+  opacity: 0;
+  transform: translateY(-50px);
+  transition: opacity .8s ease, transform .8s ease;
+}
+
 .cse-mega-slide #mega-container .mega-menu-item.active .content {
   opacity: 1;
   transform: translateY(0px);
