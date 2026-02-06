@@ -451,8 +451,12 @@
         if (config.adaptiveHeaderTheme?.toLowerCase() === 'transparent') {
           dom.header.classList.remove('cse-transparent');
         }
-        if (state.themes.header && dom.header.getAttribute('data-header-style') === 'dynamic') {
-          dom.header.setAttribute('data-section-theme', state.themes.header);
+        if (dom.header.getAttribute('data-header-style') === 'dynamic') {
+          if (state.themes.header) {
+            dom.header.setAttribute('data-section-theme', state.themes.header);
+          } else {
+            dom.header.setAttribute('data-section-theme', '');
+          }
         }
       }
     }
@@ -616,8 +620,14 @@
         // Restore original theme
         if (state.themes.headerMobile) {
           dom.headerMenu.setAttribute('data-section-theme', state.themes.headerMobile);
-          if (dom.container.classList.contains('header--menu-open')) {
-            dom.header.setAttribute('data-section-theme', state.themes.headerMobile);
+        } else {
+          dom.headerMenu.setAttribute('data-section-theme', '');
+        }
+        if (dom.container.classList.contains('header--menu-open')) {
+          if (state.themes.header) {
+            dom.header.setAttribute('data-section-theme', state.themes.header);
+          } else {
+            dom.header.setAttribute('data-section-theme', '');
           }
         }
       }
@@ -688,13 +698,21 @@
       });
       
       // Restore original mobile theme
-      if (dom.headerMenu && state.themes.headerMobile) {
-        dom.headerMenu.setAttribute('data-section-theme', state.themes.headerMobile);
+      if (dom.headerMenu) {
+        if (state.themes.headerMobile) {
+          dom.headerMenu.setAttribute('data-section-theme', state.themes.headerMobile);
+        } else {
+          dom.headerMenu.setAttribute('data-section-theme', '');
+        }
       }
-      
+
       // Restore original header theme
-      if (dom.header && state.themes.header) {
-        dom.header.setAttribute('data-section-theme', state.themes.header);
+      if (dom.header) {
+        if (state.themes.header) {
+          dom.header.setAttribute('data-section-theme', state.themes.header);
+        } else {
+          dom.header.setAttribute('data-section-theme', '');
+        }
       }
     }
     
@@ -763,13 +781,21 @@
       dom.megaContainer?.remove();
       
       // Restore themes
-      if (dom.header && state.themes.header) {
-        dom.header.setAttribute('data-section-theme', state.themes.header);
+      if (dom.header) {
+        if (state.themes.header) {
+          dom.header.setAttribute('data-section-theme', state.themes.header);
+        } else {
+          dom.header.setAttribute('data-section-theme', '');
+        }
         dom.header.classList.remove('cse-transparent');
       }
-      
-      if (dom.headerMenu && state.themes.headerMobile) {
-        dom.headerMenu.setAttribute('data-section-theme', state.themes.headerMobile);
+
+      if (dom.headerMenu) {
+        if (state.themes.headerMobile) {
+          dom.headerMenu.setAttribute('data-section-theme', state.themes.headerMobile);
+        } else {
+          dom.headerMenu.setAttribute('data-section-theme', '');
+        }
       }
       
       // Remove classes
