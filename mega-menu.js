@@ -316,7 +316,9 @@
       utils.findFocusable(menu).forEach(el => el.setAttribute('tabindex', '-1'));
       
       // Event listeners based on configuration
-      if (config.clickToShow === true || config.clickToShow === 'true') {
+      const useClick = config.clickToShow === true || config.clickToShow === 'true' || state.isTouchDevice;
+
+      if (useClick) {
         trigger.addEventListener('click', e => {
           e.preventDefault();
           toggleMenu(trigger, menu);
@@ -338,8 +340,8 @@
       });
       
       // Folder click-through
-      if ((config.folderClickThrough === true || config.folderClickThrough === 'true') && 
-          !(config.clickToShow === true || config.clickToShow === 'true') && 
+      if ((config.folderClickThrough === true || config.folderClickThrough === 'true') &&
+          !useClick &&
           !trigger.classList.contains('member-link')) {
         trigger.addEventListener('click', function(e) {
           const hrefValue = utils.getHrefValue(this);

@@ -21,9 +21,9 @@
   left: 0;
   width: 100%;
   z-index: 9;
-  height: 100%;
+  height: 100vh;
+  height: 100svh;
   pointer-events: none;
-  overflow-y: auto;
 }
 
 .tweak-fixed-header #mega-container {
@@ -42,6 +42,8 @@
   pointer-events: none;
   transform: translateY(-100%);
   min-height: initial!important;
+  max-height: 100vh;
+  max-height: 100svh;
   transition: visibility 0s linear .2s, opacity .2s linear, transform 0s linear .2s;
 }
 
@@ -185,7 +187,6 @@ body:is(.sqs-edit-mode-active,.sqs-site-styles-active) #mega-container {
 /* Slide Style */
 .cse-mega-slide #mega-container .mega-menu-item {
   clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
-  overflow: hidden;
   transition: visibility 0s linear .8s, clip-path .8s ease, transform 0s linear .8s, opacity 0s linear .8s;
 }
 
