@@ -156,25 +156,25 @@ body:is(.sqs-edit-mode-active,.sqs-site-styles-active) #mega-container {
 }
 
 /* Fix Animation Bugs by Removing Animations from Mobile Menu */
-.preFade {
+.mobile-mega-content .preFade {
     opacity: 1 !important;
 }
 
-.preScale {
+.mobile-mega-content .preScale {
     opacity: 1 !important;
     transform: scale(1) !important;
 }
 
-.preSlide {
+.mobile-mega-content .preSlide {
     opacity: 1 !important;
     transform: translate(0) !important;
 }
 
-.preClip {
+.mobile-mega-content .preClip {
     clip-path: unset !important;
 }
 
-.preFlex {
+.mobile-mega-content .preFlex {
     opacity: 1 !important;
     transform: translate(0) !important;
 }
