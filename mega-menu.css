@@ -155,6 +155,30 @@ body:is(.sqs-edit-mode-active,.sqs-site-styles-active) #mega-container {
   margin-inline: 0;
 }
 
+/* Fix Animation Bugs by Removing Animations from Mobile Menu */
+.preFade {
+    opacity: 1 !important;
+}
+
+.preScale {
+    opacity: 1 !important;
+    transform: scale(1) !important;
+}
+
+.preSlide {
+    opacity: 1 !important;
+    transform: translate(0) !important;
+}
+
+.preClip {
+    clip-path: unset !important;
+}
+
+.preFlex {
+    opacity: 1 !important;
+    transform: translate(0) !important;
+}
+
 /* Menu Nav Color Theme */
 #header .header-menu:has(.header-menu-nav-folder--active:not([data-folder="root"])) .header-menu-bg {
   background-color: var(--siteBackgroundColor);
