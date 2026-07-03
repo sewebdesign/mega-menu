@@ -271,9 +271,15 @@
      */
     function initializeSquarespaceBlocks(container) {
   if (!window.Squarespace || !window.Y) return;
-  
+
+  // Guard against double initialization — running the block initializers
+  // twice binds duplicate event listeners (e.g. accordion toggles open then
+  // immediately closed on a single click)
+  if (container.dataset.sqsBlocksInitialized) return;
+  container.dataset.sqsBlocksInitialized = 'true';
+
   const yContainer = Y.one(container);
-  
+
   // These are safe and can run immediately
   utils.requestTask(() => {
     try {
@@ -283,12 +289,13 @@
       console.warn('Squarespace layout initialization failed:', error);
     }
   }, { timeout: 1000 });
-  
-  // Delay the component initialization to let Squarespace fully load
+
+  // Delay the component initialization to let Squarespace fully load.
+  // Only initializeWebsiteComponent runs here — initializePageContent also
+  // initializes website-component blocks, so calling both double-binds them.
   setTimeout(() => {
     try {
       window.Squarespace?.initializeWebsiteComponent(Y, yContainer);
-      window.Squarespace?.initializePageContent(Y, yContainer);
     } catch (error) {
       console.warn('Squarespace component initialization failed:', error);
     }
